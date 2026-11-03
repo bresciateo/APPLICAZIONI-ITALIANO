@@ -1,26 +1,67 @@
-<!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Storyboard – Scriviamo una storia</title>
-<style>
-:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#263242;background:#f4f6f8}*{box-sizing:border-box}body{margin:0;padding:24px}main{max-width:1260px;margin:auto;background:white;padding:25px;border-radius:16px;box-shadow:0 5px 25px #172c4212}h1{color:#bb7905;margin:0 0 5px;font-size:clamp(24px,3vw,34px)}.subtitle{color:#687785;margin:0 0 22px}.titlefield{width:min(100%,560px);padding:11px;border:1px solid #c9d1da;border-radius:8px;font-size:16px;margin-top:5px}label{font-size:13px;font-weight:650}.board{overflow-x:auto;padding:6px 0 16px}.board-row{display:flex;align-items:stretch;width:max-content;min-width:100%}.rowlabel{width:112px;min-width:112px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;font-weight:800;padding:8px;line-height:1.5}.tile{width:207px;min-height:215px;border:1px solid #515e6d;margin-right:-1px;background:#fff;display:flex;flex-direction:column;padding:11px;gap:8px}.tile:focus-within{outline:2px solid #3975aa;outline-offset:-2px;z-index:1}.tile .tag{font-size:11px;text-transform:uppercase;letter-spacing:.2px;font-weight:800;overflow-wrap:anywhere;color:#374757}.tile textarea{width:100%;flex:1;min-height:140px;resize:vertical;border:0;background:transparent;outline:0;font:14px/1.55 system-ui;color:#263242}.tile textarea::placeholder{color:#8e9aa4}.tile select{width:100%;min-width:0;background:#f6f8fa;border:1px solid #cbd3db;border-radius:6px;padding:7px 4px;font-size:12px;color:#263242}.controls{display:flex;gap:5px}.controls button{border:1px solid #c6ced8;border-radius:6px;padding:5px 11px;font-size:13px;background:#f7f8fa;cursor:pointer}.controls button:disabled{opacity:.3;cursor:default}.add{margin:8px 0 20px 112px}.btn{border:1px solid #c9d1da;background:#fff;color:#263242;border-radius:8px;padding:10px 13px;font-size:13px;font-weight:700;cursor:pointer}.btn:hover,.controls button:hover:not(:disabled){background:#edf3f8}.btn.primary{background:#1e649d;color:white;border-color:#1e649d}.bottom{display:flex;flex-wrap:wrap;gap:9px;margin-top:20px}.status{font-size:12px;color:#687785;min-height:20px;margin-top:10px}.hint{margin:0 0 18px;color:#65717c;font-size:13px}.section{margin-top:12px} @media(max-width:540px){body{padding:8px}main{padding:13px}.rowlabel{width:78px;min-width:78px;font-size:10px}.tile{width:180px}.add{margin-left:78px}}@media print{body{padding:0;background:white}main{box-shadow:none;padding:0}.noprint{display:none!important}.board{overflow:visible}.tile{width:177px;min-height:180px;break-inside:avoid}.tile textarea{min-height:130px}.rowlabel{width:95px;min-width:95px}}
-</style></head><body><main><h1>Storyboard (scriviamo una storia)</h1><p class="subtitle">Laboratorio di scrittura · Progetta la tua storia</p><div class="noprint"><label for="story-title">Titolo della storia</label><br><input id="story-title" class="titlefield" placeholder="Scrivi il titolo della tua storia..." autocomplete="off"><p class="hint">Scrivi nei riquadri. Usa i menu per scegliere le sezioni e le frecce per spostarle.</p></div><div class="board"><div class="board-row"><div class="rowlabel">PARTE<br>INIZIALE</div><div id="initial" style="display:flex"></div></div><div class="add noprint"><button class="btn" id="add-initial">＋ Aggiungi riquadro iniziale</button></div><div class="board-row"><div class="rowlabel">PARTE<br>CENTRALE</div><div id="central" style="display:flex"></div></div><div class="add noprint"><button class="btn" id="add-central">＋ Aggiungi riquadro centrale</button></div><div class="board-row"><div class="rowlabel">PARTE<br>FINALE</div><div id="final" style="display:flex"></div></div></div><div class="bottom noprint"><button class="btn primary" id="save">Salva</button><button class="btn" id="export">Esporta testo</button><button class="btn" id="backup">Scarica progetto</button><button class="btn" id="import">Apri progetto salvato</button><button class="btn" id="print">Stampa</button><button class="btn" id="reset">Ricomincia</button><input id="file" type="file" accept="application/json,.json" hidden></div><div id="status" class="status noprint" role="status" aria-live="polite"></div></main>
-<script>
-(()=>{'use strict';const $=id=>document.getElementById(id);const names=['Evento principale','Descrizione dei luoghi','Descrizione delle emozioni','Descrizione delle persone'];const initialNames=['Incipit','Presentazione dei personaggi','Presentazione del luogo','Situazione iniziale','Altro'];const key='storyboard-wrw-standalone-v1';let counter=100;
-const fresh=()=>({title:'',initial:[{id:1,name:'Incipit',text:'',fixed:true}],central:names.map((name,i)=>({id:i+2,name,text:''})),final:[{id:6,name:'Conclusione',text:'',fixed:true}]});
-let data=fresh();try{const saved=JSON.parse(localStorage.getItem(key));if(valid(saved)){data=saved;counter=Math.max(100,...['initial','central','final'].flatMap(k=>data[k].map(p=>Number(p.id)||0)))}}catch(e){}
-function valid(obj){return obj&&['initial','central','final'].every(k=>Array.isArray(obj[k]))&&typeof obj.title==='string'}
-function el(t,cl,text){const x=document.createElement(t);if(cl)x.className=cl;if(text!==undefined)x.textContent=text;return x}
-function save(){data.title=$('story-title').value;try{localStorage.setItem(key,JSON.stringify(data));$('status').textContent='Modifiche salvate in questo browser'}catch(e){$('status').textContent='Salvataggio automatico non disponibile: scarica il progetto per conservarlo.'}}
-function move(group,i,offset){const j=i+offset,arr=data[group];if(j<0||j>=arr.length||arr[j].fixed)return;[arr[i],arr[j]]=[arr[j],arr[i]];render();save()}
-function renderGroup(group){const host=$(group),items=data[group];host.replaceChildren();items.forEach((item,i)=>{const tile=el('div','tile');const tag=el('div','tag',item.name);if(!item.fixed){const select=el('select');select.setAttribute('aria-label','Categoria del riquadro '+(i+1));const options=group==='central'?names:initialNames;[...new Set([...options,item.name])].forEach(n=>{const option=el('option','',n);option.value=n;select.append(option)});select.value=item.name;select.addEventListener('change',()=>{item.name=select.value;tag.textContent=item.name;save()});const controls=el('div','controls noprint');for(const [symbol,delta] of [['←',-1],['→',1]]){const b=el('button','',symbol);b.type='button';b.title=delta<0?'Sposta a sinistra':'Sposta a destra';b.disabled=(delta<0&&i===0)||(delta>0&&i===items.length-1)||(delta<0&&items[i-1]?.fixed);b.addEventListener('click',()=>move(group,i,delta));controls.append(b)}const remove=el('button','','×');remove.type='button';remove.title='Elimina riquadro';remove.addEventListener('click',()=>{if(confirm('Eliminare questo riquadro e il testo che contiene?')){items.splice(i,1);render();save()}});controls.append(remove);tile.append(select,controls)}const area=el('textarea');area.value=item.text||'';area.placeholder='Scrivi qui...';area.setAttribute('aria-label',item.name);area.addEventListener('input',()=>{item.text=area.value;save()});tile.append(tag,area);host.append(tile)})}
-function render(){renderGroup('initial');renderGroup('central');renderGroup('final')}
-function download(text,name,mime){const blob=new Blob([text],{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)}
-$('story-title').value=data.title||'';$('story-title').addEventListener('input',save);
-$('add-initial').addEventListener('click',()=>{data.initial.push({id:++counter,name:'Situazione iniziale',text:''});render();save()});
-$('add-central').addEventListener('click',()=>{data.central.push({id:++counter,name:'Evento principale',text:''});render();save()});
-$('save').addEventListener('click',save);
-$('export').addEventListener('click',()=>{save();const out=[data.title||'LA MIA STORIA'];for(const [k,heading] of [['initial','PARTE INIZIALE'],['central','PARTE CENTRALE'],['final','PARTE FINALE']]){out.push('\n'+heading);data[k].forEach(x=>out.push('\n'+x.name.toUpperCase()+'\n'+(x.text||'')))}download(out.join('\n'),'storyboard.txt','text/plain;charset=utf-8')});
-$('backup').addEventListener('click',()=>{save();download(JSON.stringify(data,null,2),'storyboard-progetto.json','application/json')});
-$('import').addEventListener('click',()=>$('file').click());$('file').addEventListener('change',async(e)=>{const file=e.target.files?.[0];if(!file)return;try{const parsed=JSON.parse(await file.text());if(!valid(parsed))throw Error('Formato non valido');if(!confirm('Aprire questo progetto? Il lavoro attuale sarà sostituito.'))return;data=parsed;counter=Math.max(100,...['initial','central','final'].flatMap(k=>data[k].map(p=>Number(p.id)||0)));$('story-title').value=data.title;render();save()}catch(error){alert('Impossibile aprire il file: '+error.message)}finally{e.target.value=''}});
-$('print').addEventListener('click',()=>window.print());$('reset').addEventListener('click',()=>{if(!confirm('Cancellare tutto lo storyboard?'))return;data=fresh();$('story-title').value='';render();save()});render();
-})();
-</script></body></html>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#d9efff">
+  <title>Le app del maestro Teo</title>
+  <style>
+    :root { --ink:#263759; --deep:#203d70; --gold:#e6ab37; --paper:#fffaf0; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; font-family:Georgia,'Times New Roman',serif; color:var(--ink); background:linear-gradient(180deg,#b6e2ff 0%,#edf8ff 45%,#fff9e9 100%); }
+    .site { max-width:1090px; margin:0 auto; padding:24px 20px 65px; }
+    header { position:relative; isolation:isolate; overflow:hidden; min-height:350px; border-radius:28px; border:4px solid #f5d680; box-shadow:0 14px 35px #224d8530, inset 0 0 0 2px #fff6d9; background:#a5d8ff; display:grid; align-items:center; }
+    header::before { content:""; position:absolute; inset:0; z-index:-2; background:url('assets/libro-fantasy.jpg') center 46%/cover no-repeat; }
+    header::after { content:""; position:absolute; inset:0; z-index:-1; background:linear-gradient(90deg,rgba(237,247,255,.96) 0%,rgba(234,245,255,.91) 36%,rgba(240,248,255,.2) 77%,rgba(240,248,255,.08) 100%); }
+    .hero-copy { max-width:600px; padding:35px clamp(22px,5vw,64px); }
+    .eyebrow { font:700 13px/1.5 system-ui,sans-serif; letter-spacing:.17em; text-transform:uppercase; color:#315d85; }
+    h1 { margin:12px 0 14px; font-weight:800; font-size:clamp(37px,6.6vw,72px); line-height:1.08; letter-spacing:-.045em; color:#a52e25; -webkit-text-stroke:.5px #ffdd7b; text-shadow:1px 2px 0 #ffdc78, 3px 4px 0 #a56e27, 5px 7px 14px #4f4a5659; }
+    .hero-copy p { max-width:430px; font:500 clamp(15px,2vw,18px)/1.6 system-ui,sans-serif; color:#28446a; }
+    main { padding-top:42px; }
+    h2 { margin:0 0 7px; color:#76501a; font-size:clamp(23px,3vw,31px); }
+    .lead { margin:0 0 23px; font:15px/1.6 system-ui,sans-serif; color:#52647e; }
+    .catalog { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,265px),1fr)); gap:22px; align-items:stretch; }
+    .app { display:block; text-decoration:none; color:inherit; background:rgba(255,251,241,.95); border:2px solid #ddbd74; border-radius:22px; overflow:hidden; box-shadow:0 8px 22px #263c6330; transition:transform .18s,box-shadow .18s,border-color .18s; }
+    .app:hover,.app:focus-visible { transform:translateY(-4px); box-shadow:0 15px 30px #263c6340; border-color:#b88828; outline:none; }
+    .app-image { position:relative; height:260px; background:#bce2ff; overflow:hidden; }
+    .app-image img { display:block; width:100%; height:100%; object-fit:cover; object-position:center; }
+    .app-image::after {content:""; position:absolute; inset:48% 0 0; background:linear-gradient(transparent,rgba(21,38,78,.79));}
+    .app-word { position:absolute; z-index:1; left:10px; right:10px; bottom:15px; text-align:center; text-transform:uppercase; font-size:clamp(23px,3.7vw,31px); font-weight:900; letter-spacing:.055em; color:#ffe9a0; text-shadow:2px 2px 0 #7c3c2d, 0 3px 10px #142b58; }
+    .app-foot {padding:18px 19px 20px; display:flex; justify-content:space-between; align-items:center; gap:15px; font:700 16px/1.4 system-ui,sans-serif;}
+    .app-desc {display:block; font:400 13px/1.5 system-ui,sans-serif; color:#56637b; margin-top:5px;}
+    .arrow {flex:none; width:36px; height:36px; display:grid; place-items:center; background:#f3dfab; border:1px solid #d9b970; border-radius:50%; font:700 22px system-ui,sans-serif;}
+    footer {margin-top:43px; text-align:center; font:13px/1.6 system-ui,sans-serif; color:#66748c;}
+    @media(max-width:640px){.site{padding:13px 12px 44px}header{min-height:375px;border-radius:20px}header::before{background-position:center center}header::after{background:linear-gradient(180deg,rgba(242,249,255,.95) 0%,rgba(240,247,255,.83) 44%,rgba(230,244,255,.13) 100%)}.hero-copy{align-self:start;padding:28px 22px}.hero-copy p{font-size:14px;max-width:280px}.app-image{height:240px}main{padding-top:29px}}
+    @media(prefers-reduced-motion:reduce){.app{transition:none}}
+  </style>
+</head>
+<body>
+  <div class="site">
+    <header>
+      <div class="hero-copy">
+        <div class="eyebrow">Un mondo di parole e idee</div>
+        <h1>Le app del<br>maestro Teo</h1>
+        <p>Piccoli strumenti digitali per immaginare, scrivere e giocare con la lingua.</p>
+      </div>
+    </header>
+    <main>
+      <h2>Scegli un'app</h2>
+      <p class="lead">Clicca sull'immagine per iniziare. Altre applicazioni arriveranno qui!</p>
+      <div class="catalog">
+        <!-- Per aggiungere una nuova app in futuro, duplicare questo elemento <a class="app"> e modificare link, immagine e testi. -->
+        <a class="app" href="storyboard-wrw/" aria-label="Apri l'app Storyboard WRW">
+          <div class="app-image">
+            <img src="assets/libro-fantasy.jpg" alt="Libro magico aperto, penna stilografica e uccellini colorati">
+            <span class="app-word">Storyboard</span>
+          </div>
+          <div class="app-foot">
+            <span>Storyboard WRW<span class="app-desc">Progetta e organizza la tua storia</span></span>
+            <span class="arrow" aria-hidden="true">→</span>
+          </div>
+        </a>
+      </div>
+    </main>
+    <footer>Le app del maestro Teo · Laboratorio di italiano</footer>
+  </div>
+</body>
+</html>

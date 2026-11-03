@@ -25,9 +25,33 @@ h1{color:#a33424;font-size:clamp(26px,3.7vw,43px);text-shadow:1px 1px #ffe8a6,2p
 @media(max-width:540px){body{padding:7px}.inner{padding:14px 9px 0}.hero img{height:188px}.rowlabel{font-size:10px}}
 @media print{body{background:white}main{border:0;box-shadow:none}.hero{display:none}.inner{padding:0}.rowlabel,.tile{background:white;color:black;box-shadow:none}h1{text-shadow:none;color:black}}
 </style></head><body><main><div class="hero">
+  <div class="hero" style="position:relative;">
+
   <a href="../" title="Torna a Le app del maestro Teo">
-    <img src="copertina-wrw.png" alt="Libro aperto da cui volano parole e uccelli colorati">
+    <img src="copertina-wrw.png"
+         alt="Libro aperto da cui volano parole e uccelli colorati">
   </a>
+
+  <div class="noprint" style="
+    position:absolute;
+    bottom:12px;
+    left:50%;
+    transform:translateX(-50%);
+    background:rgba(255,250,235,0.92);
+    border:1px solid #c69b51;
+    border-radius:12px;
+    padding:8px 14px;
+    color:#70452a;
+    font-size:13px;
+    font-weight:600;
+    text-align:center;
+    pointer-events:none;
+    width:max-content;
+    max-width:90%;
+  ">
+    ↑ Clicca sull'immagine per tornare alle app
+  </div>
+
 </div><div class="inner"></a><span class="hero-note">↖ Clicca sull'immagine per tornare alle app</span></header><h1>Storyboard (scriviamo una storia)</h1><p class="subtitle">Laboratorio di scrittura · Progetta la tua storia</p><div class="noprint"><label for="story-title">Titolo della storia</label><br><input id="story-title" class="titlefield" placeholder="Scrivi il titolo della tua storia..." autocomplete="off"><p class="hint">Scrivi nei riquadri. Usa i menu per scegliere le sezioni e le frecce per spostarle.</p></div><div class="board"><div class="board-row"><div class="rowlabel">PARTE<br>INIZIALE</div><div id="initial" style="display:flex"></div></div><div class="add noprint"><button class="btn" id="add-initial">＋ Aggiungi riquadro iniziale</button></div><div class="board-row"><div class="rowlabel">PARTE<br>CENTRALE</div><div id="central" style="display:flex"></div></div><div class="add noprint"><button class="btn" id="add-central">＋ Aggiungi riquadro centrale</button></div><div class="board-row"><div class="rowlabel">PARTE<br>FINALE</div><div id="final" style="display:flex"></div></div></div><div class="bottom noprint"><button class="btn primary" id="save">Salva</button><button class="btn" id="export">Esporta in Word (.docx)</button><button class="btn" id="backup">Scarica progetto</button><button class="btn" id="import">Apri progetto salvato</button><button class="btn" id="print">Stampa</button><button class="btn" id="reset">Ricomincia</button><input id="file" type="file" accept="application/json,.json" hidden></div><div id="status" class="status noprint" role="status" aria-live="polite"></div></div></main>
 <script>
 (()=>{'use strict';const $=id=>document.getElementById(id);const names=['Evento principale','Descrizione dei luoghi','Descrizione delle emozioni','Descrizione delle persone'];const initialNames=['Incipit','Presentazione dei personaggi','Presentazione del luogo','Situazione iniziale','Altro'];const key='storyboard-wrw-standalone-v1';let counter=100;

@@ -24,7 +24,7 @@ h1{color:#a33424;font-size:clamp(26px,3.7vw,43px);text-shadow:1px 1px #ffe8a6,2p
 .tile:focus-within{outline:3px solid #3186ce;outline-offset:-3px}
 @media(max-width:540px){body{padding:7px}.inner{padding:14px 9px 0}.hero img{height:188px}.rowlabel{font-size:10px}}
 @media print{body{background:white}main{border:0;box-shadow:none}.hero{display:none}.inner{padding:0}.rowlabel,.tile{background:white;color:black;box-shadow:none}h1{text-shadow:none;color:black}}
-</style></head><body><main><div class="hero"><img src="copertina-wrw.png" alt="Libro aperto da cui volano parole e uccelli colorati"></div><div class="inner"><h1>Storyboard (scriviamo una storia)</h1><p class="subtitle">Laboratorio di scrittura · Progetta la tua storia</p><div class="noprint"><label for="story-title">Titolo della storia</label><br><input id="story-title" class="titlefield" placeholder="Scrivi il titolo della tua storia..." autocomplete="off"><p class="hint">Scrivi nei riquadri. Usa i menu per scegliere le sezioni e le frecce per spostarle.</p></div><div class="board"><div class="board-row"><div class="rowlabel">PARTE<br>INIZIALE</div><div id="initial" style="display:flex"></div></div><div class="add noprint"><button class="btn" id="add-initial">＋ Aggiungi riquadro iniziale</button></div><div class="board-row"><div class="rowlabel">PARTE<br>CENTRALE</div><div id="central" style="display:flex"></div></div><div class="add noprint"><button class="btn" id="add-central">＋ Aggiungi riquadro centrale</button></div><div class="board-row"><div class="rowlabel">PARTE<br>FINALE</div><div id="final" style="display:flex"></div></div></div><div class="bottom noprint"><button class="btn primary" id="save">Salva</button><button class="btn" id="export">Esporta testo</button><button class="btn" id="backup">Scarica progetto</button><button class="btn" id="import">Apri progetto salvato</button><button class="btn" id="print">Stampa</button><button class="btn" id="reset">Ricomincia</button><input id="file" type="file" accept="application/json,.json" hidden></div><div id="status" class="status noprint" role="status" aria-live="polite"></div></div></main>
+</style></head><body><main><div class="hero"><img src="copertina-wrw.png" alt="Libro aperto da cui volano parole e uccelli colorati"></div><div class="inner"><h1>Storyboard (scriviamo una storia)</h1><p class="subtitle">Laboratorio di scrittura · Progetta la tua storia</p><div class="noprint"><label for="story-title">Titolo della storia</label><br><input id="story-title" class="titlefield" placeholder="Scrivi il titolo della tua storia..." autocomplete="off"><p class="hint">Scrivi nei riquadri. Usa i menu per scegliere le sezioni e le frecce per spostarle.</p></div><div class="board"><div class="board-row"><div class="rowlabel">PARTE<br>INIZIALE</div><div id="initial" style="display:flex"></div></div><div class="add noprint"><button class="btn" id="add-initial">＋ Aggiungi riquadro iniziale</button></div><div class="board-row"><div class="rowlabel">PARTE<br>CENTRALE</div><div id="central" style="display:flex"></div></div><div class="add noprint"><button class="btn" id="add-central">＋ Aggiungi riquadro centrale</button></div><div class="board-row"><div class="rowlabel">PARTE<br>FINALE</div><div id="final" style="display:flex"></div></div></div><div class="bottom noprint"><button class="btn primary" id="save">Salva</button><button class="btn" id="export">Esporta in Word (.docx)</button><button class="btn" id="backup">Scarica progetto</button><button class="btn" id="import">Apri progetto salvato</button><button class="btn" id="print">Stampa</button><button class="btn" id="reset">Ricomincia</button><input id="file" type="file" accept="application/json,.json" hidden></div><div id="status" class="status noprint" role="status" aria-live="polite"></div></div></main>
 <script>
 (()=>{'use strict';const $=id=>document.getElementById(id);const names=['Evento principale','Descrizione dei luoghi','Descrizione delle emozioni','Descrizione delle persone'];const initialNames=['Incipit','Presentazione dei personaggi','Presentazione del luogo','Situazione iniziale','Altro'];const key='storyboard-wrw-standalone-v1';let counter=100;
 const fresh=()=>({title:'',initial:[{id:1,name:'Incipit',text:'',fixed:true}],central:names.map((name,i)=>({id:i+2,name,text:''})),final:[{id:6,name:'Conclusione',text:'',fixed:true}]});
@@ -40,7 +40,47 @@ $('story-title').value=data.title||'';$('story-title').addEventListener('input',
 $('add-initial').addEventListener('click',()=>{data.initial.push({id:++counter,name:'Situazione iniziale',text:''});render();save()});
 $('add-central').addEventListener('click',()=>{data.central.push({id:++counter,name:'Evento principale',text:''});render();save()});
 $('save').addEventListener('click',save);
-$('export').addEventListener('click',()=>{save();const out=[data.title||'LA MIA STORIA'];for(const [k,heading] of [['initial','PARTE INIZIALE'],['central','PARTE CENTRALE'],['final','PARTE FINALE']]){out.push('\n'+heading);data[k].forEach(x=>out.push('\n'+x.name.toUpperCase()+'\n'+(x.text||'')))}download(out.join('\n'),'storyboard.txt','text/plain;charset=utf-8')});
+// Esportazione Word nativa: crea un vero DOCX (ZIP/OpenXML) senza librerie esterne.
+function xmlEscape(value){return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
+function paragraph(text,style){
+ const ppr=style?'<w:pPr><w:pStyle w:val="'+style+'"/></w:pPr>':'';
+ const lines=String(text??'').split(/\r\n|\r|\n/);
+ return '<w:p>'+ppr+lines.map((line,i)=>(i?'<w:r><w:br/></w:r>':'')+'<w:r><w:t xml:space="preserve">'+xmlEscape(line)+'</w:t></w:r>').join('')+'</w:p>';
+}
+function makeDocumentXml(){
+ let content=paragraph(data.title.trim()||'La mia storia','Title');
+ for(const [group,heading] of [['initial','PARTE INIZIALE'],['central','PARTE CENTRALE'],['final','PARTE FINALE']]){
+  content+=paragraph(heading,'Heading1');
+  data[group].forEach(part=>{content+=paragraph(part.name,'Heading2');content+=paragraph(part.text||' ');});
+ }
+ return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+content+'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr></w:body></w:document>';
+}
+function crc32(bytes){let c=-1;for(const b of bytes){c^=b;for(let j=0;j<8;j++)c=(c>>>1)^((c&1)?0xEDB88320:0)}return(c^-1)>>>0}
+function makeZip(entries){
+ const enc=new TextEncoder(),parts=[],central=[];let offset=0;
+ const u16=(view,pos,n)=>view.setUint16(pos,n,true),u32=(view,pos,n)=>view.setUint32(pos,n>>>0,true);
+ for(const [name,content] of entries){
+  const n=enc.encode(name),bytes=enc.encode(content),crc=crc32(bytes);
+  const loc=new Uint8Array(30+n.length),lh=new DataView(loc.buffer);u32(lh,0,0x04034b50);u16(lh,4,20);u16(lh,6,0x0800);u16(lh,8,0);u32(lh,14,crc);u32(lh,18,bytes.length);u32(lh,22,bytes.length);u16(lh,26,n.length);loc.set(n,30);
+  parts.push(loc,bytes);
+  const cen=new Uint8Array(46+n.length),ch=new DataView(cen.buffer);u32(ch,0,0x02014b50);u16(ch,4,20);u16(ch,6,20);u16(ch,8,0x0800);u32(ch,16,crc);u32(ch,20,bytes.length);u32(ch,24,bytes.length);u16(ch,28,n.length);u32(ch,42,offset);cen.set(n,46);central.push(cen);offset+=loc.length+bytes.length;
+ }
+ const centralSize=central.reduce((n,p)=>n+p.length,0),end=new Uint8Array(22),v=new DataView(end.buffer);u32(v,0,0x06054b50);u16(v,8,entries.length);u16(v,10,entries.length);u32(v,12,centralSize);u32(v,16,offset);
+ return new Blob([...parts,...central,end],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+}
+function exportDocx(){
+ save();
+ const files=[
+  ['[Content_Types].xml','<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>'],
+  ['_rels/.rels','<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'],
+  ['word/document.xml',makeDocumentXml()],
+  ['word/_rels/document.xml.rels','<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
+  ['word/styles.xml','<?xml version="1.0" encoding="UTF-8"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:sz w:val="24"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:pPr><w:spacing w:after="320"/></w:pPr><w:rPr><w:b/><w:sz w:val="36"/><w:color w:val="963C24"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:pPr><w:spacing w:before="280" w:after="120"/></w:pPr><w:rPr><w:b/><w:sz w:val="28"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:pPr><w:spacing w:before="180" w:after="70"/></w:pPr><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="754E20"/></w:rPr></w:style></w:styles>']
+ ];
+ const blob=makeZip(files),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='storyboard.docx';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+ $('status').textContent='Documento Word scaricato. Il progetto modificabile resta disponibile con «Scarica progetto».';
+}
+$('export').addEventListener('click',exportDocx);
 $('backup').addEventListener('click',()=>{save();download(JSON.stringify(data,null,2),'storyboard-progetto.json','application/json')});
 $('import').addEventListener('click',()=>$('file').click());$('file').addEventListener('change',async(e)=>{const file=e.target.files?.[0];if(!file)return;try{const parsed=JSON.parse(await file.text());if(!valid(parsed))throw Error('Formato non valido');if(!confirm('Aprire questo progetto? Il lavoro attuale sarà sostituito.'))return;data=parsed;counter=Math.max(100,...['initial','central','final'].flatMap(k=>data[k].map(p=>Number(p.id)||0)));$('story-title').value=data.title;render();save()}catch(error){alert('Impossibile aprire il file: '+error.message)}finally{e.target.value=''}});
 $('print').addEventListener('click',()=>window.print());$('reset').addEventListener('click',()=>{if(!confirm('Cancellare tutto lo storyboard?'))return;data=fresh();$('story-title').value='';render();save()});render();

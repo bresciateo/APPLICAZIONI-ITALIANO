@@ -24,34 +24,39 @@ h1{color:#a33424;font-size:clamp(26px,3.7vw,43px);text-shadow:1px 1px #ffe8a6,2p
 .tile:focus-within{outline:3px solid #3186ce;outline-offset:-3px}
 @media(max-width:540px){body{padding:7px}.inner{padding:14px 9px 0}.hero img{height:188px}.rowlabel{font-size:10px}}
 @media print{body{background:white}main{border:0;box-shadow:none}.hero{display:none}.inner{padding:0}.rowlabel,.tile{background:white;color:black;box-shadow:none}h1{text-shadow:none;color:black}}
-</style></head><body><main><div class="hero">
-  <div class="hero" style="position:relative;">
 
-  <a href="../" title="Torna a Le app del maestro Teo">
-    <img src="copertina-wrw.png"
-         alt="Libro aperto da cui volano parole e uccelli colorati">
-  </a>
-
-  <div class="noprint" style="
-    position:absolute;
-    bottom:12px;
-right:12px;
-    background:rgba(255,250,235,0.92);
-    border:1px solid #c69b51;
-    border-radius:12px;
-    padding:8px 14px;
-    color:#70452a;
-    font-size:13px;
-    font-weight:600;
-    text-align:center;
-    pointer-events:none;
-    width:max-content;
-    max-width:90%;
-  ">
-    ↖ Clicca sull'immagine per tornare alle app
+/* La minilesson: titolo cliccabile e scheda leggibile */
+.tag.lesson-trigger{font:inherit;font-family:Georgia,'Times New Roman',serif;font-size:13px;font-weight:800;color:#93382c;text-transform:uppercase;letter-spacing:.2px;background:transparent;border:0;padding:0;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:4px}
+.tag.lesson-trigger:hover,.tag.lesson-trigger:focus-visible{color:#176399;outline-offset:4px}
+.lesson-overlay[hidden]{display:none}
+.lesson-overlay{position:fixed;inset:0;z-index:9999;background:rgba(23,38,63,.62);display:flex;align-items:center;justify-content:center;padding:16px;cursor:pointer}
+.lesson-window{width:min(100%,490px);max-height:85vh;overflow:auto;border:3px solid #c69b51;border-radius:19px;padding:26px clamp(18px,4vw,34px);background:linear-gradient(145deg,#fffdf4,#fff0cc);box-shadow:0 18px 60px #11243b70;color:#493a2e;cursor:pointer}
+.lesson-window h2{margin:0 0 15px;font:700 30px Georgia,'Times New Roman',serif;color:#a33424}
+.lesson-window p{font-size:18px;font-weight:650;margin:0 0 12px}
+.lesson-window ul{font-size:17px;line-height:1.75;padding-left:25px;margin:0}
+.lesson-window .close-hint{font-size:12px;margin:18px 0 0;color:#756750;font-weight:400}
+@media print{.lesson-overlay{display:none!important}}
+</style></head><body><main><div class="hero" style="position:relative;">
+<a href="../" title="Torna a Le app del maestro Teo"><img src="copertina-wrw.png" alt="Libro aperto da cui volano parole e uccelli colorati"></a>
+<div class="noprint" style="position:absolute;bottom:12px;right:12px;background:rgba(255,250,235,.92);border:1px solid #c69b51;border-radius:12px;padding:8px 14px;color:#70452a;font-size:13px;font-weight:600;text-align:center;pointer-events:none;max-width:90%">↑ Clicca sull'immagine per tornare alle app</div>
+</div><div class="inner"><h1>Storyboard (scriviamo una storia)</h1><p class="subtitle">Laboratorio di scrittura · Progetta la tua storia</p><div class="noprint"><label for="story-title">Titolo della storia</label><br><input id="story-title" class="titlefield" placeholder="Scrivi il titolo della tua storia..." autocomplete="off"><p class="hint">Scrivi nei riquadri. Usa i menu per scegliere le sezioni e le frecce per spostarle.</p><p class="hint">Clicca sul titolo di una sezione per avere qualche suggerimento.</p></div><div class="board"><div class="board-row"><div class="rowlabel">PARTE<br>INIZIALE</div><div id="initial" style="display:flex"></div></div><div class="add noprint"><button class="btn" id="add-initial">＋ Aggiungi riquadro iniziale</button></div><div class="board-row"><div class="rowlabel">PARTE<br>CENTRALE</div><div id="central" style="display:flex"></div></div><div class="add noprint"><button class="btn" id="add-central">＋ Aggiungi riquadro centrale</button></div><div class="board-row"><div class="rowlabel">PARTE<br>FINALE</div><div id="final" style="display:flex"></div></div></div><div class="bottom noprint"><button class="btn primary" id="save">Salva</button><button class="btn" id="export">Esporta in Word (.docx)</button><button class="btn" id="backup">Scarica progetto</button><button class="btn" id="import">Apri progetto salvato</button><button class="btn" id="print">Stampa</button><button class="btn" id="reset">Ricomincia</button><input id="file" type="file" accept="application/json,.json" hidden></div><div id="status" class="status noprint" role="status" aria-live="polite"></div></div></main>
+<div id="incipit-lesson" class="lesson-overlay noprint" hidden role="dialog" aria-modal="true" aria-labelledby="incipit-lesson-title" tabindex="-1">
+  <div class="lesson-window">
+    <h2 id="incipit-lesson-title">Incipit</h2>
+    <p>Puoi iniziare con:</p>
+    <ul>
+      <li>Una domanda</li>
+      <li>Un elenco o una lista</li>
+      <li>Una statistica</li>
+      <li>Un'onomatopea</li>
+      <li>Una descrizione</li>
+      <li>Un dialogo</li>
+      <li>Un colpo di scena</li>
+      <li>Un dilemma (un dubbio)</li>
+    </ul>
+    <p class="close-hint">Clicca in un punto qualsiasi per tornare allo storyboard.</p>
   </div>
-
-</div><div class="inner"></a><span class="hero-note">↖ Clicca sull'immagine per tornare alle app</span></header><h1>Storyboard (scriviamo una storia)</h1><p class="subtitle">Laboratorio di scrittura · Progetta la tua storia</p><div class="noprint"><label for="story-title">Titolo della storia</label><br><input id="story-title" class="titlefield" placeholder="Scrivi il titolo della tua storia..." autocomplete="off"><p class="hint">Scrivi nei riquadri. Usa i menu per scegliere le sezioni e le frecce per spostarle.</p></div><div class="board"><div class="board-row"><div class="rowlabel">PARTE<br>INIZIALE</div><div id="initial" style="display:flex"></div></div><div class="add noprint"><button class="btn" id="add-initial">＋ Aggiungi riquadro iniziale</button></div><div class="board-row"><div class="rowlabel">PARTE<br>CENTRALE</div><div id="central" style="display:flex"></div></div><div class="add noprint"><button class="btn" id="add-central">＋ Aggiungi riquadro centrale</button></div><div class="board-row"><div class="rowlabel">PARTE<br>FINALE</div><div id="final" style="display:flex"></div></div></div><div class="bottom noprint"><button class="btn primary" id="save">Salva</button><button class="btn" id="export">Esporta in Word (.docx)</button><button class="btn" id="backup">Scarica progetto</button><button class="btn" id="import">Apri progetto salvato</button><button class="btn" id="print">Stampa</button><button class="btn" id="reset">Ricomincia</button><input id="file" type="file" accept="application/json,.json" hidden></div><div id="status" class="status noprint" role="status" aria-live="polite"></div></div></main>
+</div>
 <script>
 (()=>{'use strict';const $=id=>document.getElementById(id);const names=['Evento principale','Descrizione dei luoghi','Descrizione delle emozioni','Descrizione delle persone'];const initialNames=['Incipit','Presentazione dei personaggi','Presentazione del luogo','Situazione iniziale','Altro'];const key='storyboard-wrw-standalone-v1';let counter=100;
 const fresh=()=>({title:'',initial:[{id:1,name:'Incipit',text:'',fixed:true}],central:names.map((name,i)=>({id:i+2,name,text:''})),final:[{id:6,name:'Conclusione',text:'',fixed:true}]});
@@ -60,7 +65,12 @@ function valid(obj){return obj&&['initial','central','final'].every(k=>Array.isA
 function el(t,cl,text){const x=document.createElement(t);if(cl)x.className=cl;if(text!==undefined)x.textContent=text;return x}
 function save(){data.title=$('story-title').value;try{localStorage.setItem(key,JSON.stringify(data));$('status').textContent='Modifiche salvate in questo browser'}catch(e){$('status').textContent='Salvataggio automatico non disponibile: scarica il progetto per conservarlo.'}}
 function move(group,i,offset){const j=i+offset,arr=data[group];if(j<0||j>=arr.length||arr[j].fixed)return;[arr[i],arr[j]]=[arr[j],arr[i]];render();save()}
-function renderGroup(group){const host=$(group),items=data[group];host.replaceChildren();items.forEach((item,i)=>{const tile=el('div','tile');const tag=el('div','tag',item.name);if(!item.fixed){const select=el('select');select.setAttribute('aria-label','Categoria del riquadro '+(i+1));const options=group==='central'?names:initialNames;[...new Set([...options,item.name])].forEach(n=>{const option=el('option','',n);option.value=n;select.append(option)});select.value=item.name;select.addEventListener('change',()=>{item.name=select.value;tag.textContent=item.name;save()});const controls=el('div','controls noprint');for(const [symbol,delta] of [['←',-1],['→',1]]){const b=el('button','',symbol);b.type='button';b.title=delta<0?'Sposta a sinistra':'Sposta a destra';b.disabled=(delta<0&&i===0)||(delta>0&&i===items.length-1)||(delta<0&&items[i-1]?.fixed);b.addEventListener('click',()=>move(group,i,delta));controls.append(b)}const remove=el('button','','×');remove.type='button';remove.title='Elimina riquadro';remove.addEventListener('click',()=>{if(confirm('Eliminare questo riquadro e il testo che contiene?')){items.splice(i,1);render();save()}});controls.append(remove);tile.append(select,controls)}const area=el('textarea');area.value=item.text||'';area.placeholder='Scrivi qui...';area.setAttribute('aria-label',item.name);area.addEventListener('input',()=>{item.text=area.value;save()});tile.append(tag,area);host.append(tile)})}
+function renderGroup(group){const host=$(group),items=data[group];host.replaceChildren();items.forEach((item,i)=>{const tile=el('div','tile');const isIncipit=item.name==='Incipit';const tag=el(isIncipit?'button':'div',isIncipit?'tag lesson-trigger':'tag',item.name);if(isIncipit){tag.type='button';tag.title='Apri la minilesson sull’incipit';tag.setAttribute('aria-haspopup','dialog');tag.addEventListener('click',openIncipitLesson)}if(!item.fixed){const select=el('select');select.setAttribute('aria-label','Categoria del riquadro '+(i+1));const options=group==='central'?names:initialNames;[...new Set([...options,item.name])].forEach(n=>{const option=el('option','',n);option.value=n;select.append(option)});select.value=item.name;select.addEventListener('change',()=>{item.name=select.value;tag.textContent=item.name;save()});const controls=el('div','controls noprint');for(const [symbol,delta] of [['←',-1],['→',1]]){const b=el('button','',symbol);b.type='button';b.title=delta<0?'Sposta a sinistra':'Sposta a destra';b.disabled=(delta<0&&i===0)||(delta>0&&i===items.length-1)||(delta<0&&items[i-1]?.fixed);b.addEventListener('click',()=>move(group,i,delta));controls.append(b)}const remove=el('button','','×');remove.type='button';remove.title='Elimina riquadro';remove.addEventListener('click',()=>{if(confirm('Eliminare questo riquadro e il testo che contiene?')){items.splice(i,1);render();save()}});controls.append(remove);tile.append(select,controls)}const area=el('textarea');area.value=item.text||'';area.placeholder='Scrivi qui...';area.setAttribute('aria-label',item.name);area.addEventListener('input',()=>{item.text=area.value;save()});tile.append(tag,area);host.append(tile)})}
+const lesson=$('incipit-lesson');let lessonReturnFocus=null;
+function openIncipitLesson(){lessonReturnFocus=document.activeElement;lesson.hidden=false;document.body.style.overflow='hidden';lesson.focus()}
+function closeIncipitLesson(){if(lesson.hidden)return;lesson.hidden=true;document.body.style.overflow='';if(lessonReturnFocus?.isConnected)lessonReturnFocus.focus()}
+lesson.addEventListener('click',closeIncipitLesson);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!lesson.hidden)closeIncipitLesson()});
 function render(){renderGroup('initial');renderGroup('central');renderGroup('final')}
 function download(text,name,mime){const blob=new Blob([text],{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)}
 $('story-title').value=data.title||'';$('story-title').addEventListener('input',save);

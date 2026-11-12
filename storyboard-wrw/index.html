@@ -122,4 +122,69 @@ $('backup').addEventListener('click',()=>{save();download(JSON.stringify(data,nu
 $('import').addEventListener('click',()=>$('file').click());$('file').addEventListener('change',async(e)=>{const file=e.target.files?.[0];if(!file)return;try{const parsed=JSON.parse(await file.text());if(!valid(parsed))throw Error('Formato non valido');if(!confirm('Aprire questo progetto? Il lavoro attuale sarà sostituito.'))return;data=parsed;counter=Math.max(100,...['initial','central','final'].flatMap(k=>data[k].map(p=>Number(p.id)||0)));$('story-title').value=data.title;render();save()}catch(error){alert('Impossibile aprire il file: '+error.message)}finally{e.target.value=''}});
 $('print').addEventListener('click',()=>window.print());$('reset').addEventListener('click',()=>{if(!confirm('Cancellare tutto lo storyboard?'))return;data=fresh();$('story-title').value='';render();save()});render();
 })();
-</script></body></html>
+</script>
+<style>
+  #final .tag {
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 4px;
+  }
+</style>
+
+<div id="conclusione-lesson"
+     class="lesson-overlay noprint"
+     hidden
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="conclusione-title">
+
+  <div class="lesson-window">
+    <h2 id="conclusione-title">Conclusione</h2>
+
+    <p>
+      Prova a collegare la conclusione con l'incipit.
+      Fai un <em>testacoda</em>. Per esempio:
+    </p>
+
+    <ul>
+      <li>Se hai iniziato con una domanda, puoi terminare
+      con la risposta a quella domanda o con un'altra domanda.</li>
+
+      <li>Se hai iniziato con un elenco, puoi terminare
+      con un altro elenco collegato.</li>
+
+      <li>Se hai iniziato con un'onomatopea, puoi terminare
+      con un'altra onomatopea, o con la stessa...</li>
+    </ul>
+
+    <p class="close-hint">
+      Clicca in un punto qualsiasi per tornare allo storyboard.
+    </p>
+  </div>
+</div>
+
+<script>
+  const popupConclusione =
+    document.getElementById('conclusione-lesson');
+
+  document.addEventListener('click', function(event) {
+
+    if (!popupConclusione.hidden) {
+      popupConclusione.hidden = true;
+      return;
+    }
+
+    const titolo = event.target.closest('#final .tag');
+
+    if (titolo && titolo.textContent.trim() === 'Conclusione') {
+      popupConclusione.hidden = false;
+    }
+  });
+
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+      popupConclusione.hidden = true;
+    }
+  });
+</script>
+</body></html>

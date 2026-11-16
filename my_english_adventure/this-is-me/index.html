@@ -143,7 +143,7 @@ function diagnose(line){
  // The checker recognises common models, without pretending to validate every possible English sentence.
  const action='(?:get up|wake up|go to bed|go to school|go swimming|go cycling|play|ride|read|listen|have|go|do|watch|walk|draw|visit|help|dance|work|study|eat|drink|run|swim|sing|cook|write|sleep|brush|make|take|practise|practice)';
  const adverb='(?:always|usually|often|sometimes|never)';
- const time='(?:every\s+(?:day|morning|afternoon|evening|night|week|weekend|monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?|on\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?|at\s+weekends|on\s+weekends|once\s+a\s+week|twice\s+a\s+week|three\s+times\s+a\s+week)';
+ const time=String.raw`(?:every\s+(?:day|morning|afternoon|evening|night|week|weekend|monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?|on\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?|at\s+weekends|on\s+weekends|once\s+a\s+week|twice\s+a\s+week|three\s+times\s+a\s+week)`;
  if(/\beveryday\b/i.test(s))return {type:'wording',msg:'Per dire «ogni giorno» si scrive «every day», due parole. «Everyday» è un aggettivo.',practice:null};
  if(/\bon\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:s)?\b/i.test(s)===false && /\b(?:in|at)\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?\b/i.test(s))return {type:'wording',msg:'Davanti ai giorni della settimana si usa «on»: on Monday, on Sundays.',practice:null};
  if(/\bI\s+(?:am|is|are)\s+(?:\w+\s+)?\w+ing\b/i.test(s))return {type:'form',msg:'Qui stiamo raccontando abitudini con il Present Simple. Rileggi la forma del verbo.',practice:'build'};

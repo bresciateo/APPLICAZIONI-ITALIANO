@@ -1,25 +1,10 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Prova alternativa GitHub e Google</title>
-<style>body{font:16px system-ui,sans-serif;max-width:660px;margin:32px auto;padding:0 18px;color:#243047}button{font:inherit;background:#245dd1;color:#fff;padding:12px 18px;border:0;border-radius:8px}li{padding:4px}</style>
-</head><body><h1>Test alternativo di lettura</h1>
-<p>Questa pagina usa una pagina HTML di Google Apps Script, invece della risposta JSONP. Nessun accesso Google richiesto dall'interfaccia. Solo dati fittizi.</p>
-<button id="refresh">Riprova lettura</button><p id="status">In attesa...</p><ol id="items"></ol>
+<!doctype html>
+<html lang="it">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Test lettura CSV Google</title><style>body{font:17px system-ui,Arial,sans-serif;max-width:780px;margin:3rem auto;padding:0 1.2rem;color:#243047}button{font:inherit;border:0;border-radius:9px;padding:.7rem 1rem;background:#2563eb;color:white;cursor:pointer}pre{white-space:pre-wrap;word-break:break-word;background:#eef2f7;padding:1rem;border-radius:9px}a{color:#1d4ed8}</style></head>
+<body><h1>Test GitHub → Google Fogli pubblicato</h1><p>Il test prova a leggere il CSV pubblicato usando JavaScript, senza accedere a Google e senza modificare alcun dato.</p><button id="run">Verifica lettura</button><p id="status" role="status">In attesa.</p><h2>Risposta</h2><pre id="result">—</pre><p><a id="csv" target="_blank" rel="noopener noreferrer">Apri il CSV direttamente</a></p>
 <script>
-const API='https://script.google.com/macros/s/AKfycbxBw94iE1BsRYFZWr20HTca1KfJDtH7tGySrzy3ZnWWPHvOF1cJB4uRbREzfjMepvIc/exec';
-const status=document.getElementById('status'),list=document.getElementById('items');
-let frame=null,timeout=null;
-function read(){
- if(frame)frame.remove();clearTimeout(timeout);list.replaceChildren();status.textContent='Lettura in corso...';
- frame=document.createElement('iframe');frame.title='Servizio di lettura Google';frame.hidden=true;frame.src=API+'?mode=bridge&t='+Date.now();document.body.appendChild(frame);
- timeout=setTimeout(()=>{status.textContent='Nessuna risposta dal servizio: possibile blocco del frame o del collegamento Google.'},12000);
-}
-window.addEventListener('message',e=>{
- if(!frame||e.source!==frame.contentWindow)return;
- if(e.origin!=='https://script.google.com'&&!e.origin.endsWith('.googleusercontent.com'))return;
- if(!e.data||e.data.kind!=='wc-test-read-v2')return;
- clearTimeout(timeout);const r=e.data.result;
- if(!r?.ok){status.textContent='Errore: '+(r?.error||'sconosciuto');return;}
- status.textContent='Parole ricevute: '+r.count;
- for(const item of r.items){const li=document.createElement('li');li.textContent=item.word;list.appendChild(li)}
-});
-document.getElementById('refresh').addEventListener('click',read);read();
+const CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vQM1SEYH9DrSwXymZiSDgliUtANahg0ewDWRiFQdm5_ynFczyQ9oaHFh8XsBDpgu9cY6HDv9lj35Xbv/pub?gid=0&single=true&output=csv';
+document.getElementById('csv').href=CSV_URL;
+async function run(){const status=document.getElementById('status'),result=document.getElementById('result');status.textContent='Lettura in corso…';result.textContent='—';try{const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),12000);let response;try{response=await fetch(CSV_URL,{method:'GET',redirect:'follow',cache:'no-store',signal:controller.signal});}finally{clearTimeout(timeout)}if(!response.ok)throw new Error('Risposta HTTP '+response.status);const data=await response.text();result.textContent=data.slice(0,4000);status.textContent='Lettura riuscita tramite JavaScript ('+data.length+' caratteri).';}catch(e){status.textContent='Lettura JavaScript non riuscita.';result.textContent=String(e)+'\n\nSe il CSV si apre direttamente dal link, ma non qui, è possibile un blocco CORS o un reindirizzamento non utilizzabile da JavaScript.';}}
+document.getElementById('run').addEventListener('click',run);run();
 </script></body></html>

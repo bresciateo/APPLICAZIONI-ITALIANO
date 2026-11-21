@@ -1,10 +1,38 @@
 <!doctype html>
-<html lang="it">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Test lettura CSV Google</title><style>body{font:17px system-ui,Arial,sans-serif;max-width:780px;margin:3rem auto;padding:0 1.2rem;color:#243047}button{font:inherit;border:0;border-radius:9px;padding:.7rem 1rem;background:#2563eb;color:white;cursor:pointer}pre{white-space:pre-wrap;word-break:break-word;background:#eef2f7;padding:1rem;border-radius:9px}a{color:#1d4ed8}</style></head>
-<body><h1>Test GitHub → Google Fogli pubblicato</h1><p>Il test prova a leggere il CSV pubblicato usando JavaScript, senza accedere a Google e senza modificare alcun dato.</p><button id="run">Verifica lettura</button><p id="status" role="status">In attesa.</p><h2>Risposta</h2><pre id="result">—</pre><p><a id="csv" target="_blank" rel="noopener noreferrer">Apri il CSV direttamente</a></p>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>La fabbrica delle parole · GitHub TEST</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#243047;background:#f8fafc}body{max-width:940px;margin:auto;padding:22px}h1{font-size:1.65rem}button,input{font:inherit;padding:11px;border:1px solid #aab4c4;border-radius:9px}button{cursor:pointer;background:#dfeafe}input{max-width:100%;box-sizing:border-box}button:hover{background:#c9dffb}section{padding:18px;border:1px solid #d9e1ea;border-radius:14px;background:white;margin:16px 0}.controls{display:flex;gap:10px;flex-wrap:wrap}.controls input{flex:1;min-width:160px}#status{min-height:1.4em;color:#305c7f}.cloud{min-height:330px;display:flex;gap:8px 12px;align-items:center;justify-content:center;align-content:center;flex-wrap:wrap;background:white;padding:20px;border-radius:12px}.word{font-weight:750;white-space:nowrap}small{color:#5a687c}
+</style></head><body>
+<h1>La fabbrica delle parole <small>TEST GitHub ↔ Google</small></h1>
+<p>Questa versione prova l'invio senza account e la visualizzazione delle risposte approvate. Non usare ancora dati reali di alunni.</p>
+<nav class="controls"><button id="studentMode">Partecipa</button><button id="limMode">Presentazione LIM</button></nav>
+<section><label for="code">Codice della sessione</label><div class="controls"><input id="code" inputmode="numeric" maxlength="6" placeholder="6 cifre"><button id="enter">Entra</button></div><p id="status" role="status"></p></section>
+<section id="student" hidden><h2 id="question">La tua parola</h2><p id="rule"></p><form id="send" class="controls"><input id="word" maxlength="100" placeholder="Scrivi una parola o breve frase" required><button id="submit" type="submit">Invia</button></form></section>
+<section id="lim" hidden><h2 id="limquestion"></h2><p id="visibility"></p><div id="cloud" class="cloud"></div><small>La visualizzazione legge il CSV Google pubblicato. In questo test le parole sono disposte liberamente.</small></section>
+<iframe name="sendFrame" id="sendFrame" title="Invio parola" style="display:none"></iframe>
+<form id="hiddenForm" method="POST" target="sendFrame" style="display:none">
+<input name="action" value="submit"><input name="code"><input name="participant"><input name="id"><input name="word">
+</form>
 <script>
-const CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vQM1SEYH9DrSwXymZiSDgliUtANahg0ewDWRiFQdm5_ynFczyQ9oaHFh8XsBDpgu9cY6HDv9lj35Xbv/pub?gid=0&single=true&output=csv';
-document.getElementById('csv').href=CSV_URL;
-async function run(){const status=document.getElementById('status'),result=document.getElementById('result');status.textContent='Lettura in corso…';result.textContent='—';try{const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),12000);let response;try{response=await fetch(CSV_URL,{method:'GET',redirect:'follow',cache:'no-store',signal:controller.signal});}finally{clearTimeout(timeout)}if(!response.ok)throw new Error('Risposta HTTP '+response.status);const data=await response.text();result.textContent=data.slice(0,4000);status.textContent='Lettura riuscita tramite JavaScript ('+data.length+' caratteri).';}catch(e){status.textContent='Lettura JavaScript non riuscita.';result.textContent=String(e)+'\n\nSe il CSV si apre direttamente dal link, ma non qui, è possibile un blocco CORS o un reindirizzamento non utilizzabile da JavaScript.';}}
-document.getElementById('run').addEventListener('click',run);run();
+'use strict';
+// CONFIGURARE SOLO DOPO CHE I DUE DEPLOYMENT/FONTI SONO STATI CREATI.
+const CONFIG={
+  POST_URL:'https://script.google.com/macros/s/AKfycbyGzsqYzdI6jr4pCTrMkNcUMP2TI30iJcGIg56QUP2UTK5LQ0viHLMugoLSbiDmGsE/exec',
+  CSV_URL:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRKoZkm2eYKVNd9A6DXWfRHqvlvdKqsPb3DcdmlCfxLCJR4ILmc3JxU4eHx0pTswbf8xcZWnObK48Jv/pub?gid=369652149&single=true&output=csv'
+};
+const $=id=>document.getElementById(id);let mode='student',session='',current=null,liveTimer=null,postInFlight=false,pendingId=null;
+const state={};
+function status(t){$('status').textContent=t||'';}
+function uuid(){return crypto.randomUUID();}
+function participant(code){const key='wc07_person_'+code;let id=localStorage.getItem(key);if(!id){id=uuid();localStorage.setItem(key,id)}return id;}
+function csvRows(text){const out=[];let row=[],cell='',quoted=false;for(let i=0;i<text.length;i++){const ch=text[i];if(ch==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}else if(ch===','&&!quoted){row.push(cell);cell='';}else if((ch==='\n'||ch==='\r')&&!quoted){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(v=>v!==''))out.push(row);row=[];cell='';}else cell+=ch;}row.push(cell);if(row.some(v=>v!==''))out.push(row);return out;}
+async function read(){if(!CONFIG.CSV_URL.startsWith('https://'))throw Error('Manca URL CSV nelle impostazioni');const r=await fetch(CONFIG.CSV_URL,{cache:'no-store'});if(!r.ok)throw Error('Lettura CSV HTTP '+r.status);const rows=csvRows((await r.text()).replace(/^\ufeff/,''));if(rows[0]?.[0]!=='Codice')throw Error('CSV inatteso: verifica pubblicazione del foglio Pubblico');return rows.slice(1).filter(r=>r[0]===session);}
+async function refresh(){if(!session)return;try{const rows=await read();if(rows.length===0)throw Error('Codice non trovato nel CSV pubblico (o non ancora aggiornato)');const q=rows[0][1],open=rows[0][2]==='TRUE',visible=rows[0][3]==='TRUE';current={q,open,visible};$('question').textContent=q;$('limquestion').textContent=q;$('visibility').textContent=visible?'':'La nuvola è nascosta dal docente.';$('cloud').replaceChildren();const words=visible?rows.filter(r=>r[4]&&Number(r[5])>0):[];if(visible){const max=Math.max(1,...words.map(r=>Number(r[5])));for(const r of words){const el=document.createElement('span');el.className='word';el.textContent=r[4];el.style.fontSize=(22+Math.min(38,(Number(r[5])-1)*8))+'px';el.style.color=['#205c94','#b05a20','#26754a','#8c4098'][words.indexOf(r)%4];$('cloud').append(el);}}$('submit').disabled=!open;status('Sessione '+session+(open?' · raccolta aperta':' · raccolta chiusa'));}catch(e){status('Lettura: '+e.message);}}
+function setMode(m){mode=m;$('student').hidden=m!=='student'||!session;$('lim').hidden=m!=='lim'||!session;}
+$('studentMode').onclick=()=>setMode('student');$('limMode').onclick=()=>setMode('lim');
+$('enter').onclick=async()=>{const c=$('code').value.trim();if(!/^\d{6}$/.test(c)){status('Inserisci un codice di sei cifre');return;}session=c;setMode(mode);await refresh();clearInterval(liveTimer);liveTimer=setInterval(refresh,5000);};
+$('send').onsubmit=e=>{e.preventDefault();if(postInFlight||!current?.open)return;if(!CONFIG.POST_URL.startsWith('https://')){status('Manca URL pubblico Apps Script');return;}const word=$('word').value.trim();if(!word)return;postInFlight=true;pendingId=uuid();$('submit').disabled=true;const f=$('hiddenForm');f.action=CONFIG.POST_URL;for(const [k,v] of Object.entries({code:session,participant:participant(session),id:pendingId,word})){f.elements.namedItem(k).value=v;}status('Invio in corso…');f.submit();setTimeout(()=>{if(postInFlight){postInFlight=false;$('submit').disabled=false;status('Nessuna conferma dal servizio Google: controlla il foglio delle risposte prima di riprovare.');}},12000);};
+// Accetta soltanto messaggi provenienti dal frame di invio e dal dominio Google.
+window.addEventListener('message',e=>{const frame=$('sendFrame');if(e.source!==frame.contentWindow||!/^https:\/\/(?:script\.googleusercontent\.com|script\.google\.com)$/.test(e.origin))return;if(!e.data||typeof e.data.ok!=='boolean')return;postInFlight=false;$('submit').disabled=false;if(e.data.ok){$('word').value='';status('Risposta ricevuta. Se la moderazione è attiva, comparirà dopo approvazione.');}else status('Invio non riuscito: '+(e.data.error||'errore'));});
 </script></body></html>

@@ -6,13 +6,23 @@
 </style></head><body>
 <h1>La fabbrica delle parole <small>TEST GitHub ↔ Google</small></h1>
 <p>Questa versione prova l'invio senza account e la visualizzazione delle risposte approvate. Non usare ancora dati reali di alunni.</p>
-<nav class="controls"><button id="studentMode">Partecipa</button><button id="limMode">Presentazione LIM</button></nav>
+<nav class="controls"><button id="studentMode">Partecipa</button><button id="limMode">Presentazione LIM</button><button id="teacherMode">Docente</button></nav>
 <section><label for="code">Codice della sessione</label><div class="controls"><input id="code" inputmode="numeric" maxlength="6" placeholder="6 cifre"><button id="enter">Entra</button></div><p id="status" role="status"></p></section>
 <section id="student" hidden><h2 id="question">La tua parola</h2><p id="rule"></p><form id="send" class="controls"><input id="word" maxlength="100" placeholder="Scrivi una parola o breve frase" required><button id="submit" type="submit">Invia</button></form></section>
 <section id="lim" hidden><h2 id="limquestion"></h2><p id="visibility"></p><div id="cloud" class="cloud"></div><small>La visualizzazione legge il CSV Google pubblicato. In questo test le parole sono disposte liberamente.</small></section>
+<section id="teacher" hidden>
+<h2>Area docente</h2>
+<div id="login"><p>La password è condivisa tra i docenti autorizzati. Non inserirla negli indirizzi o nelle pagine GitHub.</p><div class="controls"><input type="password" id="password" placeholder="Password docente" autocomplete="off"><button id="loginBtn">Accedi</button></div></div>
+<div id="adminArea" hidden>
+<div class="controls"><button id="logout">Esci dall’area docente</button><button id="reloadSessions">Aggiorna sessioni</button></div>
+<h3>Nuova attività</h3><div class="controls"><input id="newQ" placeholder="Domanda o argomento" maxlength="200"><label>Risposte <select id="newLimit"><option value="1">1</option><option value="3">3</option><option value="5">5</option><option value="0">Illimitate</option></select></label><label><input type="checkbox" id="newModerate" checked> Moderazione</label><button id="newSession">Crea sessione</button></div>
+<h3>Le mie sessioni</h3><div id="sessionList"></div>
+<div id="sessionManage" hidden><h3 id="sessionTitle"></h3><div class="controls" id="sessionControls"></div><h3>Risposte</h3><div id="answerList"></div></div>
+</div>
+</section>
 <iframe name="sendFrame" id="sendFrame" title="Invio parola" style="display:none"></iframe>
 <form id="hiddenForm" method="POST" target="sendFrame" style="display:none">
-<input name="action" value="submit"><input name="code"><input name="participant"><input name="id"><input name="word">
+<input name="action"><input name="nonce"><input name="password"><input name="code"><input name="participant"><input name="id"><input name="word"><input name="q"><input name="limit"><input name="moderate"><input name="field"><input name="value"><input name="status">
 </form>
 <script>
 'use strict';
@@ -21,7 +31,7 @@ const CONFIG={
   POST_URL:'https://script.google.com/macros/s/AKfycbyGzsqYzdI6jr4pCTrMkNcUMP2TI30iJcGIg56QUP2UTK5LQ0viHLMugoLSbiDmGsE/exec',
   CSV_URL:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRKoZkm2eYKVNd9A6DXWfRHqvlvdKqsPb3DcdmlCfxLCJR4ILmc3JxU4eHx0pTswbf8xcZWnObK48Jv/pub?gid=369652149&single=true&output=csv'
 };
-const $=id=>document.getElementById(id);let mode='student',session='',current=null,liveTimer=null,postInFlight=false,pendingId=null;
+const $=id=>document.getElementById(id);let mode='student',session='',current=null,liveTimer=null,adminTimer=null,teacherPassword='',selectedSession='',selectedSessionData=null,postPending=null;
 const state={};
 function status(t){$('status').textContent=t||'';}
 function uuid(){return crypto.randomUUID();}
@@ -29,10 +39,73 @@ function participant(code){const key='wc07_person_'+code;let id=localStorage.get
 function csvRows(text){const out=[];let row=[],cell='',quoted=false;for(let i=0;i<text.length;i++){const ch=text[i];if(ch==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}else if(ch===','&&!quoted){row.push(cell);cell='';}else if((ch==='\n'||ch==='\r')&&!quoted){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(v=>v!==''))out.push(row);row=[];cell='';}else cell+=ch;}row.push(cell);if(row.some(v=>v!==''))out.push(row);return out;}
 async function read(){if(!CONFIG.CSV_URL.startsWith('https://'))throw Error('Manca URL CSV nelle impostazioni');const r=await fetch(CONFIG.CSV_URL,{cache:'no-store'});if(!r.ok)throw Error('Lettura CSV HTTP '+r.status);const rows=csvRows((await r.text()).replace(/^\ufeff/,''));if(rows[0]?.[0]!=='Codice')throw Error('CSV inatteso: verifica pubblicazione del foglio Pubblico');return rows.slice(1).filter(r=>r[0]===session);}
 async function refresh(){if(!session)return;try{const rows=await read();if(rows.length===0)throw Error('Codice non trovato nel CSV pubblico (o non ancora aggiornato)');const q=rows[0][1],open=rows[0][2]==='TRUE',visible=rows[0][3]==='TRUE';current={q,open,visible};$('question').textContent=q;$('limquestion').textContent=q;$('visibility').textContent=visible?'':'La nuvola è nascosta dal docente.';$('cloud').replaceChildren();const words=visible?rows.filter(r=>r[4]&&Number(r[5])>0):[];if(visible){const max=Math.max(1,...words.map(r=>Number(r[5])));for(const r of words){const el=document.createElement('span');el.className='word';el.textContent=r[4];el.style.fontSize=(22+Math.min(38,(Number(r[5])-1)*8))+'px';el.style.color=['#205c94','#b05a20','#26754a','#8c4098'][words.indexOf(r)%4];$('cloud').append(el);}}$('submit').disabled=!open;status('Sessione '+session+(open?' · raccolta aperta':' · raccolta chiusa'));}catch(e){status('Lettura: '+e.message);}}
-function setMode(m){mode=m;$('student').hidden=m!=='student'||!session;$('lim').hidden=m!=='lim'||!session;}
-$('studentMode').onclick=()=>setMode('student');$('limMode').onclick=()=>setMode('lim');
+function setMode(m){mode=m;$('student').hidden=m!=='student'||!session;$('lim').hidden=m!=='lim'||!session;$('teacher').hidden=m!=='teacher';}
+$('studentMode').onclick=()=>setMode('student');$('limMode').onclick=()=>setMode('lim');$('teacherMode').onclick=()=>setMode('teacher');
 $('enter').onclick=async()=>{const c=$('code').value.trim();if(!/^\d{6}$/.test(c)){status('Inserisci un codice di sei cifre');return;}session=c;setMode(mode);await refresh();clearInterval(liveTimer);liveTimer=setInterval(refresh,5000);};
-$('send').onsubmit=e=>{e.preventDefault();if(postInFlight||!current?.open)return;if(!CONFIG.POST_URL.startsWith('https://')){status('Manca URL pubblico Apps Script');return;}const word=$('word').value.trim();if(!word)return;postInFlight=true;pendingId=uuid();$('submit').disabled=true;const f=$('hiddenForm');f.action=CONFIG.POST_URL;for(const [k,v] of Object.entries({code:session,participant:participant(session),id:pendingId,word})){f.elements.namedItem(k).value=v;}status('Invio in corso…');f.submit();setTimeout(()=>{if(postInFlight){postInFlight=false;$('submit').disabled=false;status('Nessuna conferma dal servizio Google: controlla il foglio delle risposte prima di riprovare.');}},12000);};
-// Accetta soltanto messaggi provenienti dal frame di invio e dal dominio Google.
-window.addEventListener('message',e=>{const frame=$('sendFrame');if(e.source!==frame.contentWindow||!/^https:\/\/(?:script\.googleusercontent\.com|script\.google\.com)$/.test(e.origin))return;if(!e.data||typeof e.data.ok!=='boolean')return;postInFlight=false;$('submit').disabled=false;if(e.data.ok){$('word').value='';status('Risposta ricevuta. Se la moderazione è attiva, comparirà dopo approvazione.');}else status('Invio non riuscito: '+(e.data.error||'errore'));});
+function request(action,data={}){
+ if(postPending)return Promise.reject(Error('Un’altra richiesta è in corso.'));
+ return new Promise((resolve,reject)=>{
+  const nonce=uuid(),form=$('hiddenForm');
+  postPending={nonce,resolve,reject};
+  form.action=CONFIG.POST_URL;
+  for(const name of ['action','nonce','password','code','participant','id','word','q','limit','moderate','field','value','status']){
+   const el=form.elements.namedItem(name);el.value=String(({action,nonce,...data})[name]??'');
+  }
+  form.submit();
+  setTimeout(()=>{if(postPending?.nonce===nonce){postPending=null;reject(Error('Nessuna risposta da Google entro 20 secondi.'));}},20000);
+ });
+}
+window.addEventListener('message',event=>{
+ if(!/^https:\/\/(?:script\.googleusercontent\.com|script\.google\.com)(?:$|:443$)/.test(event.origin))return;
+ const result=event.data;
+ if(!postPending||!result||result.nonce!==postPending.nonce||typeof result.ok!=='boolean')return;
+ const task=postPending;postPending=null;
+ if(result.ok)task.resolve(result.data??result);else task.reject(Error(result.error||'Errore del servizio'));
+});
+$('send').onsubmit=async event=>{
+ event.preventDefault();if(!current?.open)return;
+ $('submit').disabled=true;
+ try{
+  await request('submit',{code:session,participant:participant(session),id:uuid(),word:$('word').value.trim()});
+  $('word').value='';status('Risposta inviata. Se è attiva la moderazione, comparirà dopo approvazione.');
+ }catch(err){status('Invio: '+err.message);}finally{$('submit').disabled=false;}
+};
+async function adminCall(action,data={}){if(!teacherPassword)throw Error('Prima inserisci la password docente.');return request('admin_'+action,{password:teacherPassword,...data});}
+function adminNotice(t){status(t);}
+$('loginBtn').onclick=async()=>{
+ teacherPassword=$('password').value;
+ try{await adminCall('auth');$('password').value='';$('login').hidden=true;$('adminArea').hidden=false;adminNotice('Accesso docente riuscito.');await adminSessions();}catch(e){teacherPassword='';adminNotice('Accesso docente: '+e.message);}
+};
+$('logout').onclick=()=>{teacherPassword='';selectedSession='';$('login').hidden=false;$('adminArea').hidden=true;$('sessionManage').hidden=true;adminNotice('Uscita dall’area docente.');};
+$('reloadSessions').onclick=adminSessions;
+async function adminSessions(){
+ try{
+  const sessions=await adminCall('list');const container=$('sessionList');container.replaceChildren();
+  for(const s of sessions){const b=document.createElement('button');b.textContent=s.code+' · '+s.q;b.onclick=()=>openSession(s);container.append(b);}
+ }catch(e){adminNotice('Sessioni: '+e.message);}
+}
+$('newSession').onclick=async()=>{
+ try{const result=await adminCall('create',{q:$('newQ').value,limit:$('newLimit').value,moderate:$('newModerate').checked});adminNotice('Sessione creata: '+result.code);await adminSessions();}
+ catch(e){adminNotice('Creazione: '+e.message);}
+};
+async function openSession(s){
+ selectedSession=s.code;selectedSessionData=s;$('sessionManage').hidden=false;$('sessionTitle').textContent=s.q+' · '+s.code;
+ const target=$('sessionControls');target.replaceChildren();
+ for(const [field,labelText,value] of [['open','Raccolta aperta',s.open],['visible','Mostra sulla LIM',s.visible]]){
+  const l=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.checked=value;
+  input.onchange=async()=>{try{await adminCall('change',{code:s.code,field,value:input.checked});selectedSessionData[field]=input.checked;adminNotice('Impostazione aggiornata.');}catch(e){input.checked=!input.checked;adminNotice(e.message);}};
+  l.append(input,document.createTextNode(labelText));target.append(l);
+ }
+ await adminAnswers();
+}
+async function adminAnswers(){
+ if(!selectedSession||!teacherPassword)return;
+ try{const answers=await adminCall('responses',{code:selectedSession});const target=$('answerList');target.replaceChildren();
+ for(const a of answers){const item=document.createElement('p');item.append(document.createTextNode(a.word+' — '+a.status+' '));
+ if(a.status==='pending'){for(const [status,label] of [['ok','Approva'],['rejected','Escludi']]){
+  const b=document.createElement('button');b.textContent=label;b.onclick=async()=>{try{await adminCall('moderate',{code:selectedSession,id:a.id,status});await adminAnswers();}catch(e){adminNotice(e.message);}};item.append(b);
+ }}target.append(item);}
+ }catch(e){adminNotice('Risposte: '+e.message);}
+}
+setInterval(()=>{if(mode==='teacher'&&teacherPassword&&selectedSession&&!postPending)adminAnswers();},7000);
 </script></body></html>

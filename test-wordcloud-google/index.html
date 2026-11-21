@@ -1,47 +1,25 @@
-<!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Test GitHub ↔ Google Fogli</title>
-<style>body{font:16px system-ui,Arial;max-width:660px;margin:30px auto;padding:0 18px;color:#243047}h1{font-size:1.45rem}input,button{padding:11px;border-radius:8px;font:inherit}input{border:1px solid #aab4c2;width:min(330px,70%)}button{background:#2563eb;color:white;border:0;cursor:pointer}button:disabled{opacity:.45}#status{margin:12px 0}li{margin:7px 0}.info{background:#f1f5f9;border-radius:9px;padding:12px}</style>
-</head><body>
-<h1>Prova di collegamento GitHub ↔ Google Fogli</h1>
-<p class="info">Scrivi una parola di prova: sarà inviata a un foglio Google separato. Questa pagina non gestisce sessioni scolastiche o dati personali.</p>
-<form id="ui"><input id="word" maxlength="70" required placeholder="Per esempio: amicizia"><button id="send">Invia</button></form>
-<p id="status" role="status">In attesa...</p>
-<h2>Ultime parole registrate</h2><ol id="entries"></ol>
-<iframe name="hiddenPost" title="Invio dati" style="display:none"></iframe>
-<form id="post" target="hiddenPost" method="POST" style="display:none"><input name="action" value="add"><input name="id" id="postId"><input name="word" id="postWord"></form>
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Prova alternativa GitHub e Google</title>
+<style>body{font:16px system-ui,sans-serif;max-width:660px;margin:32px auto;padding:0 18px;color:#243047}button{font:inherit;background:#245dd1;color:#fff;padding:12px 18px;border:0;border-radius:8px}li{padding:4px}</style>
+</head><body><h1>Test alternativo di lettura</h1>
+<p>Questa pagina usa una pagina HTML di Google Apps Script, invece della risposta JSONP. Nessun accesso Google richiesto dall'interfaccia. Solo dati fittizi.</p>
+<button id="refresh">Riprova lettura</button><p id="status">In attesa...</p><ol id="items"></ol>
 <script>
-// Sostituire il valore qui sotto con URL del deployment /exec del PROGETTO DI TEST.
-const API_URL='https://script.google.com/macros/s/AKfycbxBw94iE1BsRYFZWr20HTca1KfJDtH7tGySrzy3ZnWWPHvOF1cJB4uRbREzfjMepvIc/exec';
-const status=document.querySelector('#status');
-const entries=document.querySelector('#entries');
-const validApi=()=>/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(API_URL);
-function refresh(){
- if(!validApi()){status.textContent='Configura prima API_URL nel file index.html.';return;}
- const cb='__wcTest_'+Math.random().toString(36).slice(2);
- const s=document.createElement('script');let done=false;
- const end=()=>{delete window[cb];s.remove();};
- window[cb]=(result)=>{done=true;end();if(!result.ok){status.textContent=result.error;return;}
-   entries.replaceChildren();result.items.slice().reverse().forEach(item=>{const li=document.createElement('li');li.textContent=item.word;entries.append(li)});
-   if(result.count) status.textContent='Parole ricevute dal database: '+result.count;
- };
- s.onerror=()=>{if(!done){end();status.textContent='Lettura non riuscita: verifica URL e accesso pubblico al test.'}};
- s.src=API_URL+'?callback='+encodeURIComponent(cb)+'&t='+Date.now();document.head.append(s);
- setTimeout(()=>{if(!done&&window[cb]){end();status.textContent='Lettura scaduta: controlla autorizzazioni del deployment.'}},12000);
+const API='https://script.google.com/macros/s/AKfycbxBw94iE1BsRYFZWr20HTca1KfJDtH7tGySrzy3ZnWWPHvOF1cJB4uRbREzfjMepvIc/exec';
+const status=document.getElementById('status'),list=document.getElementById('items');
+let frame=null,timeout=null;
+function read(){
+ if(frame)frame.remove();clearTimeout(timeout);list.replaceChildren();status.textContent='Lettura in corso...';
+ frame=document.createElement('iframe');frame.title='Servizio di lettura Google';frame.hidden=true;frame.src=API+'?mode=bridge&t='+Date.now();document.body.appendChild(frame);
+ timeout=setTimeout(()=>{status.textContent='Nessuna risposta dal servizio: possibile blocco del frame o del collegamento Google.'},12000);
 }
-document.querySelector('#ui').addEventListener('submit',e=>{
- e.preventDefault();if(!validApi()){status.textContent='Configura prima API_URL.';return;}
- const word=document.querySelector('#word').value.trim();if(!word)return;
- const id=crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2);
- document.querySelector('#postId').value=id;
- document.querySelector('#postWord').value=word;
- document.querySelector('#post').action=API_URL;
- document.querySelector('#post').submit();
- status.textContent='Invio richiesto. Verifico la comparsa sul foglio...';
- document.querySelector('#word').value='';
- // La risposta POST non è leggibile da GitHub a causa dell'origine diversa.
- // Conferma tramite lettura del foglio, non supporre che l'invio sia riuscito.
- let n=0;const poll=()=>{refresh();if(++n<5)setTimeout(poll,2500)};setTimeout(poll,2000);
+window.addEventListener('message',e=>{
+ if(!frame||e.source!==frame.contentWindow)return;
+ if(e.origin!=='https://script.google.com'&&!e.origin.endsWith('.googleusercontent.com'))return;
+ if(!e.data||e.data.kind!=='wc-test-read-v2')return;
+ clearTimeout(timeout);const r=e.data.result;
+ if(!r?.ok){status.textContent='Errore: '+(r?.error||'sconosciuto');return;}
+ status.textContent='Parole ricevute: '+r.count;
+ for(const item of r.items){const li=document.createElement('li');li.textContent=item.word;list.appendChild(li)}
 });
-refresh();
+document.getElementById('refresh').addEventListener('click',read);read();
 </script></body></html>

@@ -56,7 +56,13 @@ function request(action,data={}){
  });
 }
 window.addEventListener('message',event=>{
- if(!/^https:\/\/(?:script\.googleusercontent\.com|script\.google\.com)(?:$|:443$)/.test(event.origin))return;
+ const origine = event.origin;
+
+const origineGoogle =
+  origine === 'https://script.google.com' ||
+  /^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(origine);
+
+if (!origineGoogle) return;
  const result=event.data;
  if(!postPending||!result||result.nonce!==postPending.nonce||typeof result.ok!=='boolean')return;
  const task=postPending;postPending=null;

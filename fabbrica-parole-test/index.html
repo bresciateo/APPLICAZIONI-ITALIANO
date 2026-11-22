@@ -20,7 +20,16 @@
 <div class="controls"><button id="logout">Esci dall’area docente</button><button id="reloadSessions">Aggiorna sessioni</button></div>
 <h3>Nuova attività</h3><div class="controls"><input id="newQ" placeholder="Domanda o argomento" maxlength="200"><label>Risposte <select id="newLimit"><option value="1">1</option><option value="3">3</option><option value="5">5</option><option value="0">Illimitate</option></select></label><label><input type="checkbox" id="newModerate" checked> Moderazione</label><button id="newSession">Crea sessione</button></div>
 <h3>Le mie sessioni</h3><div id="sessionList"></div>
-<div id="sessionManage" hidden><h3 id="sessionTitle"></h3><div class="controls" id="sessionControls"></div><h3>Risposte</h3><div id="answerList"></div><h3>Anteprima della nuvola</h3><p id="teacherCounts" class="preview-note"></p><canvas id="teacherCloud" class="wordcloud" width="1200" height="650"></canvas><div class="tools"><button id="teacherDownload">Scarica PNG</button></div><h3>Impostazioni grafiche</h3><div id="cloudSettings"></div></div>
+<div id="sessionManage" hidden><h3 id="sessionTitle"></h3><div class="controls" id="sessionControls"></div>
+<div class="session-editor" id="teacherDirectPanel">
+  <h4>Inserimento diretto del docente</h4>
+  <p class="preview-note">Aggiungi le parole suggerite a voce dalla classe. Funziona anche quando la raccolta degli studenti è chiusa. Ogni invio è approvato automaticamente; ripetendo la stessa parola ne aumenti la frequenza.</p>
+  <form id="teacherAddForm" class="controls">
+    <input id="teacherAddWord" maxlength="100" placeholder="Scrivi una parola o una breve frase" aria-label="Parola da aggiungere" required>
+    <button id="teacherAddBtn" type="submit">Aggiungi parola</button>
+  </form>
+</div>
+<h3>Risposte</h3><div id="answerList"></div><h3>Anteprima della nuvola</h3><p id="teacherCounts" class="preview-note"></p><canvas id="teacherCloud" class="wordcloud" width="1200" height="650"></canvas><div class="tools"><button id="teacherDownload">Scarica PNG</button></div><h3>Impostazioni grafiche</h3><div id="cloudSettings"></div></div>
 </div>
 </section>
 <iframe name="sendFrame" id="sendFrame" title="Invio parola" style="display:none"></iframe>
@@ -96,6 +105,21 @@ $('loginBtn').onclick=async()=>{
 };
 $('logout').onclick=()=>{teacherPassword='';selectedSession='';$('login').hidden=false;$('adminArea').hidden=true;$('sessionManage').hidden=true;adminNotice('Uscita dall’area docente.');};
 $('reloadSessions').onclick=adminSessions;
+$('teacherAddForm').onsubmit=async event=>{
+ event.preventDefault();
+ const code=selectedSession,word=$('teacherAddWord').value.trim(),btn=$('teacherAddBtn');
+ if(!code||!word)return;
+ btn.disabled=true;
+ try{
+  await adminCall('add_word',{code,word});
+  $('teacherAddWord').value='';
+  adminNotice('Parola aggiunta e approvata: '+word.toLocaleLowerCase('it'));
+  await adminAnswers();
+  if(session===code)await refresh();
+  $('teacherAddWord').focus();
+ }catch(e){adminNotice('Inserimento docente: '+e.message);}
+ finally{btn.disabled=false;}
+};
 async function adminSessions(){
  try{
   const sessions=await adminCall('list');const container=$('sessionList');container.replaceChildren();
@@ -107,15 +131,15 @@ $('newSession').onclick=async()=>{
  catch(e){adminNotice('Creazione: '+e.message);}
 };
 async function openSession(s){
- selectedSession=s.code;selectedSessionData=s;teacherWords=[];teacherSettings=null;$('sessionManage').hidden=false;$('sessionTitle').textContent=s.q+' · '+s.code;
- $('sessionManage').querySelector('.session-editor')?.remove();
+ selectedSession=s.code;selectedSessionData=s;teacherWords=[];teacherSettings=null;$('teacherAddWord').value='';$('sessionManage').hidden=false;$('sessionTitle').textContent=s.q+' · '+s.code;
+ $('sessionManage').querySelector('#sessionEditPanel')?.remove();
  const target=$('sessionControls');target.replaceChildren();
  for(const [field,labelText,value] of [['open','Raccolta aperta',s.open],['visible','Mostra sulla LIM',s.visible]]){
   const l=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.checked=value;
   input.onchange=async()=>{try{await adminCall('change',{code:s.code,field,value:input.checked});selectedSessionData[field]=input.checked;adminNotice('Impostazione aggiornata.');}catch(e){input.checked=!input.checked;adminNotice(e.message);}};
   l.append(input,document.createTextNode(labelText));target.append(l);
  }
- const editPanel=document.createElement('div');editPanel.className='session-editor';
+ const editPanel=document.createElement('div');editPanel.className='session-editor';editPanel.id='sessionEditPanel';
  const editTitle=document.createElement('h4');editTitle.textContent='Modifica questa sessione';editPanel.append(editTitle);
  const editRow=document.createElement('div');editRow.className='settings-grid';editPanel.append(editRow);
  const questionLabel=document.createElement('label');questionLabel.textContent='Domanda o argomento';

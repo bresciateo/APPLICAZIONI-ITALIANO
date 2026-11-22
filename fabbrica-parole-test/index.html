@@ -4,7 +4,17 @@
 <style>
 :root{font-family:system-ui,sans-serif;color:#243047;background:#f8fafc}body{max-width:940px;margin:auto;padding:22px}h1{font-size:1.65rem}button,input{font:inherit;padding:11px;border:1px solid #aab4c4;border-radius:9px}button{cursor:pointer;background:#dfeafe}input{max-width:100%;box-sizing:border-box}button:hover{background:#c9dffb}section{padding:18px;border:1px solid #d9e1ea;border-radius:14px;background:white;margin:16px 0}.controls{display:flex;gap:10px;flex-wrap:wrap}.controls input{flex:1;min-width:160px}#status{min-height:1.4em;color:#305c7f}.cloud{min-height:330px;display:flex;gap:8px 12px;align-items:center;justify-content:center;align-content:center;flex-wrap:wrap;background:white;padding:20px;border-radius:12px}.word{font-weight:750;white-space:nowrap}small{color:#5a687c}
 </style></head><body>
-<h1>La fabbrica delle parole <small>TEST GitHub ↔ Google</small></h1>
+<a href="../" title="Torna alle app del maestro Teo"
+   style="display:block;text-decoration:none;color:inherit;margin-bottom:20px;">
+  <img
+    src="../assets/assets:fabbrica-parole-banner.png"
+    alt="La fabbrica delle parole"
+    style="display:block;width:100%;height:auto;border-radius:16px;">
+  <div style="text-align:right;font-size:13px;padding-top:6px;">
+    ↖ Clicca sull'immagine per tornare alle app del maestro Teo
+  </div>
+</a>
+  <h1>La fabbrica delle parole <small>TEST GitHub ↔ Google</small></h1>
 <p>Questa versione prova l'invio senza account e la visualizzazione delle risposte approvate. Non usare ancora dati reali di alunni.</p>
 <nav class="controls"><button id="studentMode">Partecipa</button><button id="limMode">Presentazione LIM</button><button id="teacherMode">Docente</button></nav>
 <section><label for="code">Codice della sessione</label><div class="controls"><input id="code" inputmode="numeric" maxlength="6" placeholder="6 cifre"><button id="enter">Entra</button></div><p id="status" role="status"></p></section>

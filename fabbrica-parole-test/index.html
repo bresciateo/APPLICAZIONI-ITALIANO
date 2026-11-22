@@ -2,7 +2,7 @@
 <html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La fabbrica delle parole</title>
 <style>
-:root{font-family:system-ui,sans-serif;color:#243047;background:#f8fafc}body{max-width:940px;margin:auto;padding:22px}h1{font-size:1.65rem}button,input{font:inherit;padding:11px;border:1px solid #aab4c4;border-radius:9px}button{cursor:pointer;background:#dfeafe}input{max-width:100%;box-sizing:border-box}button:hover{background:#c9dffb}section{padding:18px;border:1px solid #d9e1ea;border-radius:14px;background:white;margin:16px 0}.controls{display:flex;gap:10px;flex-wrap:wrap}.controls input{flex:1;min-width:160px}#status{min-height:1.4em;color:#305c7f}.cloud{min-height:330px;display:flex;gap:8px 12px;align-items:center;justify-content:center;align-content:center;flex-wrap:wrap;background:white;padding:20px;border-radius:12px}.word{font-weight:750;white-space:nowrap}canvas.wordcloud{width:100%;height:auto;display:block;max-width:100%;background:white;border:1px solid #e1e6eb;border-radius:12px}.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:12px 0}.settings-grid label{display:flex;flex-direction:column;gap:5px}.settings-grid select,.settings-grid input{padding:9px;border:1px solid #aab4c4;border-radius:8px}.preview-note{color:#596579}.tools{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}small{color:#5a687c}
+:root{font-family:system-ui,sans-serif;color:#243047;background:#f8fafc}body{max-width:940px;margin:auto;padding:22px}h1{font-size:1.65rem}button,input{font:inherit;padding:11px;border:1px solid #aab4c4;border-radius:9px}button{cursor:pointer;background:#dfeafe}input{max-width:100%;box-sizing:border-box}button:hover{background:#c9dffb}section{padding:18px;border:1px solid #d9e1ea;border-radius:14px;background:white;margin:16px 0}.controls{display:flex;gap:10px;flex-wrap:wrap}.controls input{flex:1;min-width:160px}#status{min-height:1.4em;color:#305c7f}.cloud{min-height:330px;display:flex;gap:8px 12px;align-items:center;justify-content:center;align-content:center;flex-wrap:wrap;background:white;padding:20px;border-radius:12px}.word{font-weight:750;white-space:nowrap}canvas.wordcloud{width:100%;height:auto;display:block;max-width:100%;background:white;border:1px solid #e1e6eb;border-radius:12px}.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:12px 0}.settings-grid label{display:flex;flex-direction:column;gap:5px}.settings-grid select,.settings-grid input{padding:9px;border:1px solid #aab4c4;border-radius:8px}.preview-note{color:#596579}.tools{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.session-editor{border:1px solid #d9e1ea;background:#f6f9ff;padding:14px;border-radius:12px;margin:14px 0}.session-editor h4{margin:0 0 10px}.session-editor small{display:block;margin-top:10px}small{color:#5a687c}
 </style></head><body>
 <a href="../" title="Torna alle app del maestro Teo" style="display:block;text-decoration:none;color:inherit;margin-bottom:20px;">
   <img src="../assets/assets:fabbrica-parole-banner.png" alt="La fabbrica delle parole" style="display:block;width:100%;height:auto;border-radius:16px;">
@@ -108,12 +108,37 @@ $('newSession').onclick=async()=>{
 };
 async function openSession(s){
  selectedSession=s.code;selectedSessionData=s;teacherWords=[];teacherSettings=null;$('sessionManage').hidden=false;$('sessionTitle').textContent=s.q+' · '+s.code;
+ $('sessionManage').querySelector('.session-editor')?.remove();
  const target=$('sessionControls');target.replaceChildren();
  for(const [field,labelText,value] of [['open','Raccolta aperta',s.open],['visible','Mostra sulla LIM',s.visible]]){
   const l=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.checked=value;
   input.onchange=async()=>{try{await adminCall('change',{code:s.code,field,value:input.checked});selectedSessionData[field]=input.checked;adminNotice('Impostazione aggiornata.');}catch(e){input.checked=!input.checked;adminNotice(e.message);}};
   l.append(input,document.createTextNode(labelText));target.append(l);
  }
+ const editPanel=document.createElement('div');editPanel.className='session-editor';
+ const editTitle=document.createElement('h4');editTitle.textContent='Modifica questa sessione';editPanel.append(editTitle);
+ const editRow=document.createElement('div');editRow.className='settings-grid';editPanel.append(editRow);
+ const questionLabel=document.createElement('label');questionLabel.textContent='Domanda o argomento';
+ const questionInput=document.createElement('input');questionInput.type='text';questionInput.maxLength=200;questionInput.value=s.q;questionLabel.append(questionInput);editRow.append(questionLabel);
+ const limitLabel=document.createElement('label');limitLabel.textContent='Risposte per partecipante';
+ const limitInput=document.createElement('select');for(const [value,text] of [['1','1'],['3','3'],['5','5'],['0','Illimitate']]){const opt=document.createElement('option');opt.value=value;opt.textContent=text;limitInput.append(opt);}limitInput.value=String(s.limit);limitLabel.append(limitInput);editRow.append(limitLabel);
+ const moderateLabel=document.createElement('label');moderateLabel.textContent='Moderazione';
+ const moderateInput=document.createElement('select');for(const [value,text] of [['true','Attiva'],['false','Disattivata']]){const opt=document.createElement('option');opt.value=value;opt.textContent=text;moderateInput.append(opt);}moderateInput.value=String(s.moderate);moderateLabel.append(moderateInput);editRow.append(moderateLabel);
+ const saveSession=document.createElement('button');saveSession.textContent='Salva modifiche alla sessione';saveSession.onclick=async()=>{
+   const changes=[['q',questionInput.value.trim()],['limit',limitInput.value],['moderate',moderateInput.value]]
+      .filter(([field,value])=>String(selectedSessionData[field])!==String(value));
+   if(!questionInput.value.trim()){adminNotice('Inserisci una domanda valida.');return;}
+   if(!changes.length){adminNotice('Nessuna modifica da salvare.');return;}
+   saveSession.disabled=true;
+   try{
+    for(const [field,value] of changes){await adminCall('change',{code:s.code,field,value});selectedSessionData[field]=field==='limit'?Number(value):field==='moderate'?value==='true':value;}
+    $('sessionTitle').textContent=selectedSessionData.q+' · '+s.code;
+    adminNotice('Sessione aggiornata. Le risposte già ricevute sono conservate.');await adminSessions();
+   }catch(e){adminNotice('Modifica sessione: '+e.message+' (controlla i valori e riprova).');}
+   finally{saveSession.disabled=false;}
+ };editPanel.append(saveSession);
+ const help=document.createElement('small');help.textContent='Il nuovo limite si applica agli invii successivi. Le risposte già inviate non vengono eliminate; eventuali risposte in attesa restano da moderare.';editPanel.append(help);
+ $('sessionControls').insertAdjacentElement('afterend',editPanel);
  try{await loadTeacherSettings();}catch(e){teacherSettings={...defaults};buildTeacherSettings();adminNotice('Impostazioni: '+e.message);}
  await adminAnswers();
 }
@@ -268,8 +293,13 @@ function drawCloud(cv,words,raw){
   const max=items[0].n;
   items.forEach((it,i)=>{
     const count=items.length;
-    const scale=Math.min(1,Math.sqrt(14/Math.max(1,count)));
-    const size=Math.round((33+83*(it.n/max))*scale);
+    const totalVotes=items.reduce((sum,word)=>sum+word.n,0);
+    // Con pochissime risposte evita parole giganti in mezzo e minuscole ai bordi.
+    // Dimensione contenuta anche quando una sola parola ha frequenza 1.
+    const abundance=Math.min(1,Math.sqrt(totalVotes/35));
+    const countScale=Math.min(1,Math.sqrt(18/Math.max(1,count)));
+    const ratio=it.n/max;
+    const size=Math.round((24+34*Math.pow(ratio,.60)+25*abundance)*countScale);
     let done=false;
     for(const factor of [1,.85,.72,.60,.50]){
       if(attempt(it.w,Math.max(20,Math.round(size*factor)),true,380,i<5)){done=true;break;}
@@ -286,7 +316,7 @@ function drawCloud(cv,words,raw){
       const pick=rand()*total;let acc=0,it=items[0];
       for(const item of items){acc+=item.n;if(pick<acc){it=item;break;}}
       const sizeRange={tight:[15,24],normal:[17,28],loose:[19,32]}[s.density]||[17,28];
-      const size=Math.round(sizeRange[0]+rand()*(sizeRange[1]-sizeRange[0]));
+      const size=Math.round(Math.max(21,sizeRange[0]+rand()*(sizeRange[1]-sizeRange[0])+3));
       // Alternare i tentativi vicino ai bordi e all'interno, senza forzare
       // un centro vuoto o una sagoma fatta di poche parole minuscole.
       attempt(it.w,size,false,3,false);

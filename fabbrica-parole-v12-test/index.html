@@ -1,1 +1,379 @@
-<!-- File provvisorio -->
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>La fabbrica delle parole</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#243047;background:#f8fafc}body{max-width:940px;margin:auto;padding:22px}h1{font-size:1.65rem}button,input{font:inherit;padding:11px;border:1px solid #aab4c4;border-radius:9px}button{cursor:pointer;background:#dfeafe}input{max-width:100%;box-sizing:border-box}button:hover{background:#c9dffb}section{padding:18px;border:1px solid #d9e1ea;border-radius:14px;background:white;margin:16px 0}.controls{display:flex;gap:10px;flex-wrap:wrap}.controls input{flex:1;min-width:160px}#status{min-height:1.4em;color:#305c7f}.cloud{min-height:330px;display:flex;gap:8px 12px;align-items:center;justify-content:center;align-content:center;flex-wrap:wrap;background:white;padding:20px;border-radius:12px}.word{font-weight:750;white-space:nowrap}canvas.wordcloud{width:100%;height:auto;display:block;max-width:100%;background:white;border:1px solid #e1e6eb;border-radius:12px}.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:12px 0}.settings-grid label{display:flex;flex-direction:column;gap:5px}.settings-grid select,.settings-grid input{padding:9px;border:1px solid #aab4c4;border-radius:8px}.preview-note{color:#596579}.tools{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.session-editor{border:1px solid #d9e1ea;background:#f6f9ff;padding:14px;border-radius:12px;margin:14px 0}.session-editor h4{margin:0 0 10px}.session-editor small{display:block;margin-top:10px}small{color:#5a687c}
+</style></head><body>
+<a href="../" title="Torna alle app del maestro Teo" style="display:block;text-decoration:none;color:inherit;margin-bottom:20px;">
+  <img src="../assets/assets:fabbrica-parole-banner.png" alt="La fabbrica delle parole" style="display:block;width:100%;height:auto;border-radius:16px;">
+  <div style="text-align:right;font-size:13px;padding-top:6px;">↖ Clicca sull'immagine per tornare alle app del maestro Teo</div>
+</a>
+<h1>La fabbrica delle parole <small>TEST prestazioni 1.2</small></h1>
+<nav class="controls"><button id="studentMode">Partecipa</button><button id="limMode">Presentazione LIM</button><button id="teacherMode">Docente</button></nav>
+<section><label for="code">Codice della sessione</label><div class="controls"><input id="code" inputmode="numeric" maxlength="6" placeholder="6 cifre"><button id="enter">Entra</button></div><p id="status" role="status"></p></section>
+<section id="student" hidden><h2 id="question">La tua parola</h2><p id="rule"></p><form id="send" class="controls"><input id="word" maxlength="100" placeholder="Scrivi una parola o breve frase" required><button id="submit" type="submit">Invia</button></form></section>
+<section id="lim" hidden><h2 id="limquestion"></h2><p id="visibility"></p><canvas id="cloud" class="wordcloud" width="1200" height="650"></canvas><p id="limCounts" class="preview-note"></p><div class="tools"><button id="limDownload">Scarica PNG</button><button id="limFullscreen">Schermo intero</button></div></section>
+<section id="teacher" hidden>
+<h2>Area docente</h2>
+<div id="login"><p>La password è condivisa tra i docenti autorizzati. Non inserirla negli indirizzi o nelle pagine GitHub.</p><div class="controls"><input type="password" id="password" placeholder="Password docente" autocomplete="off"><button id="loginBtn">Accedi</button></div></div>
+<div id="adminArea" hidden>
+<div class="controls"><button id="logout">Esci dall’area docente</button><button id="reloadSessions">Aggiorna sessioni</button></div>
+<h3>Nuova attività</h3><div class="controls"><input id="newQ" placeholder="Domanda o argomento" maxlength="200"><label>Risposte <select id="newLimit"><option value="1">1</option><option value="3">3</option><option value="5">5</option><option value="0">Illimitate</option></select></label><label><input type="checkbox" id="newModerate" checked> Moderazione</label><button id="newSession">Crea sessione</button></div>
+<h3>Le mie sessioni</h3><div id="sessionList"></div>
+<div id="sessionManage" hidden><h3 id="sessionTitle"></h3><div class="controls" id="sessionControls"></div>
+<div class="session-editor" id="teacherDirectPanel">
+  <h4>Inserimento diretto del docente</h4>
+  <p class="preview-note">Aggiungi le parole suggerite a voce dalla classe. Funziona anche quando la raccolta degli studenti è chiusa. Ogni invio è approvato automaticamente; ripetendo la stessa parola ne aumenti la frequenza.</p>
+  <form id="teacherAddForm" class="controls">
+    <input id="teacherAddWord" maxlength="100" placeholder="Scrivi una parola o una breve frase" aria-label="Parola da aggiungere" required>
+    <button id="teacherAddBtn" type="submit">Aggiungi parola</button>
+  </form>
+</div>
+<h3>Risposte</h3><div class="tools"><button id="approveAll" type="button" hidden>Approva tutte le risposte in attesa</button><span id="pendingCounter" aria-live="polite"></span></div><div id="answerList"></div><h3>Anteprima della nuvola</h3><p id="teacherCounts" class="preview-note"></p><canvas id="teacherCloud" class="wordcloud" width="1200" height="650"></canvas><div class="tools"><button id="teacherDownload">Scarica PNG</button></div><h3>Impostazioni grafiche</h3><div id="cloudSettings"></div></div>
+</div>
+</section>
+<iframe name="sendFrame" id="sendFrame" title="Invio parola" style="display:none"></iframe>
+<form id="hiddenForm" method="POST" target="sendFrame" style="display:none">
+<input name="action"><input name="nonce"><input name="password"><input name="code"><input name="participant"><input name="id"><input name="word"><input name="q"><input name="limit"><input name="moderate"><input name="field"><input name="value"><input name="status"><input name="settings">
+</form>
+<script>
+'use strict';
+// CONFIGURARE SOLO DOPO CHE I DUE DEPLOYMENT/FONTI SONO STATI CREATI.
+const CONFIG={
+  POST_URL:'https://script.google.com/macros/s/AKfycbylx31ay9mg2U6JpmhGeLfmLeXDn1_mXX64hYi6-QtGeqBL7Zc1LiPWnYF_Wwm_23sG/exec',
+  CSV_URL:'https://docs.google.com/spreadsheets/d/e/2PACX-1vTi-HPgeAHQOFA9tJwLWP5ri98T88kLOz8FXTzg7xdbvjVQfStYegj3jOCfqOTm2IydnUfs42zn0Zgo/pub?gid=1606398752&single=true&output=csv'
+};
+const $=id=>document.getElementById(id);let mode='student',session='',current=null,liveTimer=null,adminTimer=null,teacherPassword='',selectedSession='',selectedSessionData=null,postPending=null,teacherWords=[],teacherSettings=null,adminAnswersBusy=false;
+const state={};let lastLimSignature='';
+function status(t){$('status').textContent=t||'';}
+function uuid(){return crypto.randomUUID();}
+function participant(code){const key='wc07_person_'+code;let id=localStorage.getItem(key);if(!id){id=uuid();localStorage.setItem(key,id)}return id;}
+function csvRows(text){const out=[];let row=[],cell='',quoted=false;for(let i=0;i<text.length;i++){const ch=text[i];if(ch==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}else if(ch===','&&!quoted){row.push(cell);cell='';}else if((ch==='\n'||ch==='\r')&&!quoted){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(v=>v!==''))out.push(row);row=[];cell='';}else cell+=ch;}row.push(cell);if(row.some(v=>v!==''))out.push(row);return out;}
+async function read(){if(!CONFIG.CSV_URL.startsWith('https://'))throw Error('Manca URL CSV nelle impostazioni');const r=await fetch(CONFIG.CSV_URL,{cache:'no-store'});if(!r.ok)throw Error('Lettura CSV HTTP '+r.status);const rows=csvRows((await r.text()).replace(/^\ufeff/,''));if(rows[0]?.[0]!=='Codice')throw Error('CSV inatteso: verifica pubblicazione del foglio Pubblico');return rows.slice(1).filter(r=>r[0]===session);}
+async function refresh(){
+ if(!session)return;
+ try{
+  const rows=await read();
+  if(!rows.length)throw Error('Codice non trovato nel CSV pubblico (o non ancora aggiornato)');
+  const q=rows[0][1],open=rows[0][2]==='TRUE',visible=rows[0][3]==='TRUE';
+  current={q,open,visible};$('question').textContent=q;$('limquestion').textContent=q;
+  $('visibility').textContent=visible?'':'La nuvola è nascosta dal docente.';
+  const words=visible?rows.filter(r=>r[4]&&Number(r[5])>0).map(r=>[r[4],Number(r[5])]):[];
+  const settings=parseSettings(rows[0][6]);
+  const sig=JSON.stringify([words,settings,visible]);
+  if(sig!==lastLimSignature){drawCloud($('cloud'),words,settings);lastLimSignature=sig;}
+  $('limCounts').textContent=visible?`${words.length} parole differenti · ${words.reduce((a,w)=>a+w[1],0)} partecipazioni conteggiate`:'In attesa della pubblicazione del docente';
+  $('submit').disabled=!open;
+  status('Sessione '+session+(open?' · raccolta aperta':' · raccolta chiusa'));
+ }catch(e){status('Lettura: '+e.message);}
+}
+function setMode(m){mode=m;$('student').hidden=m!=='student'||!session;$('lim').hidden=m!=='lim'||!session;$('teacher').hidden=m!=='teacher';}
+$('studentMode').onclick=()=>setMode('student');$('limMode').onclick=()=>setMode('lim');$('teacherMode').onclick=()=>setMode('teacher');
+$('enter').onclick=async()=>{const c=$('code').value.trim();if(!/^\d{6}$/.test(c)){status('Inserisci un codice di sei cifre');return;}session=c;setMode(mode);await refresh();clearInterval(liveTimer);liveTimer=setInterval(refresh,5000);};
+function request(action,data={}){
+ if(!CONFIG.POST_URL.startsWith('https://'))return Promise.reject(Error('Configura prima l’URL del deployment di TEST.'));
+ if(postPending)return Promise.reject(Error('Un’altra richiesta è in corso.'));
+ return new Promise((resolve,reject)=>{
+  const nonce=uuid(),form=$('hiddenForm');
+  postPending={nonce,resolve,reject};
+  form.action=CONFIG.POST_URL;
+  for(const name of ['action','nonce','password','code','participant','id','word','q','limit','moderate','field','value','status','settings']){
+   const el=form.elements.namedItem(name);el.value=String(({action,nonce,...data})[name]??'');
+  }
+  form.submit();
+  setTimeout(()=>{if(postPending?.nonce===nonce){postPending=null;reject(Error('Nessuna risposta da Google entro 45 secondi.'));}},45000);
+ });
+}
+window.addEventListener('message',event=>{
+ if(!(event.origin==='https://script.google.com'||/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(event.origin)))return;
+ const result=event.data;
+ if(!postPending||!result||result.nonce!==postPending.nonce||typeof result.ok!=='boolean')return;
+ const task=postPending;postPending=null;
+ if(result.ok)task.resolve(result.data??result);else task.reject(Error(result.error||'Errore del servizio'));
+});
+$('send').onsubmit=async event=>{
+ event.preventDefault();if(!current?.open)return;
+ $('submit').disabled=true;
+ try{
+  await request('submit',{code:session,participant:participant(session),id:uuid(),word:$('word').value.trim()});
+  $('word').value='';status('Risposta inviata. Se è attiva la moderazione, comparirà dopo approvazione.');
+ }catch(err){status('Invio: '+err.message);}finally{$('submit').disabled=false;}
+};
+async function adminCall(action,data={}){if(!teacherPassword)throw Error('Prima inserisci la password docente.');return request('admin_'+action,{password:teacherPassword,...data});}
+function adminNotice(t){status(t);}
+$('loginBtn').onclick=async()=>{
+ teacherPassword=$('password').value;
+ try{await adminCall('auth');$('password').value='';$('login').hidden=true;$('adminArea').hidden=false;adminNotice('Accesso docente riuscito.');await adminSessions();}catch(e){teacherPassword='';adminNotice('Accesso docente: '+e.message);}
+};
+$('logout').onclick=()=>{teacherPassword='';selectedSession='';$('login').hidden=false;$('adminArea').hidden=true;$('sessionManage').hidden=true;adminNotice('Uscita dall’area docente.');};
+$('reloadSessions').onclick=adminSessions;
+$('teacherAddForm').onsubmit=async event=>{
+ event.preventDefault();
+ const code=selectedSession,word=$('teacherAddWord').value.trim(),btn=$('teacherAddBtn');
+ if(!code||!word)return;
+ btn.disabled=true;
+ try{
+  await adminCall('add_word',{code,word});
+  $('teacherAddWord').value='';
+  adminNotice('Parola aggiunta e approvata: '+word.toLocaleLowerCase('it'));
+  await adminAnswers();
+  if(session===code)await refresh();
+  $('teacherAddWord').focus();
+ }catch(e){adminNotice('Inserimento docente: '+e.message);}
+ finally{btn.disabled=false;}
+};
+async function adminSessions(){
+ try{
+  const sessions=await adminCall('list');const container=$('sessionList');container.replaceChildren();
+  for(const s of sessions){const b=document.createElement('button');b.textContent=s.code+' · '+s.q;b.onclick=()=>openSession(s);container.append(b);}
+ }catch(e){adminNotice('Sessioni: '+e.message);}
+}
+$('newSession').onclick=async()=>{
+ try{const result=await adminCall('create',{q:$('newQ').value,limit:$('newLimit').value,moderate:$('newModerate').checked});adminNotice('Sessione creata: '+result.code);await adminSessions();}
+ catch(e){adminNotice('Creazione: '+e.message);}
+};
+async function openSession(s){
+ selectedSession=s.code;selectedSessionData=s;teacherWords=[];teacherSettings=null;$('teacherAddWord').value='';$('sessionManage').hidden=false;$('sessionTitle').textContent=s.q+' · '+s.code;
+ $('sessionManage').querySelector('#sessionEditPanel')?.remove();
+ const target=$('sessionControls');target.replaceChildren();
+ for(const [field,labelText,value] of [['open','Raccolta aperta',s.open],['visible','Mostra sulla LIM',s.visible]]){
+  const l=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.checked=value;
+  input.onchange=async()=>{try{await adminCall('change',{code:s.code,field,value:input.checked});selectedSessionData[field]=input.checked;adminNotice('Impostazione aggiornata.');}catch(e){input.checked=!input.checked;adminNotice(e.message);}};
+  l.append(input,document.createTextNode(labelText));target.append(l);
+ }
+ const editPanel=document.createElement('div');editPanel.className='session-editor';editPanel.id='sessionEditPanel';
+ const editTitle=document.createElement('h4');editTitle.textContent='Modifica questa sessione';editPanel.append(editTitle);
+ const editRow=document.createElement('div');editRow.className='settings-grid';editPanel.append(editRow);
+ const questionLabel=document.createElement('label');questionLabel.textContent='Domanda o argomento';
+ const questionInput=document.createElement('input');questionInput.type='text';questionInput.maxLength=200;questionInput.value=s.q;questionLabel.append(questionInput);editRow.append(questionLabel);
+ const limitLabel=document.createElement('label');limitLabel.textContent='Risposte per partecipante';
+ const limitInput=document.createElement('select');for(const [value,text] of [['1','1'],['3','3'],['5','5'],['0','Illimitate']]){const opt=document.createElement('option');opt.value=value;opt.textContent=text;limitInput.append(opt);}limitInput.value=String(s.limit);limitLabel.append(limitInput);editRow.append(limitLabel);
+ const moderateLabel=document.createElement('label');moderateLabel.textContent='Moderazione';
+ const moderateInput=document.createElement('select');for(const [value,text] of [['true','Attiva'],['false','Disattivata']]){const opt=document.createElement('option');opt.value=value;opt.textContent=text;moderateInput.append(opt);}moderateInput.value=String(s.moderate);moderateLabel.append(moderateInput);editRow.append(moderateLabel);
+ const saveSession=document.createElement('button');saveSession.textContent='Salva modifiche alla sessione';saveSession.onclick=async()=>{
+   const changes=[['q',questionInput.value.trim()],['limit',limitInput.value],['moderate',moderateInput.value]]
+      .filter(([field,value])=>String(selectedSessionData[field])!==String(value));
+   if(!questionInput.value.trim()){adminNotice('Inserisci una domanda valida.');return;}
+   if(!changes.length){adminNotice('Nessuna modifica da salvare.');return;}
+   saveSession.disabled=true;
+   try{
+    for(const [field,value] of changes){await adminCall('change',{code:s.code,field,value});selectedSessionData[field]=field==='limit'?Number(value):field==='moderate'?value==='true':value;}
+    $('sessionTitle').textContent=selectedSessionData.q+' · '+s.code;
+    adminNotice('Sessione aggiornata. Le risposte già ricevute sono conservate.');await adminSessions();
+   }catch(e){adminNotice('Modifica sessione: '+e.message+' (controlla i valori e riprova).');}
+   finally{saveSession.disabled=false;}
+ };editPanel.append(saveSession);
+ const help=document.createElement('small');help.textContent='Il nuovo limite si applica agli invii successivi. Le risposte già inviate non vengono eliminate; eventuali risposte in attesa restano da moderare.';editPanel.append(help);
+ $('sessionControls').insertAdjacentElement('afterend',editPanel);
+ try{await loadTeacherSettings();}catch(e){teacherSettings={...defaults};buildTeacherSettings();adminNotice('Impostazioni: '+e.message);}
+ await adminAnswers();
+}
+async function adminAnswers(){
+ if(!selectedSession||!teacherPassword||adminAnswersBusy||postPending)return;
+ adminAnswersBusy=true;
+ const code=selectedSession;
+ try{
+  const answers=await adminCall('responses',{code});
+  if(code!==selectedSession)return;
+  const target=$('answerList');target.replaceChildren();
+  const seen=new Set(),counts=new Map();let pending=0;
+  for(const a of answers){
+   if(a.status==='ok'){const key=a.participant+'|'+a.word;if(!seen.has(key)){seen.add(key);counts.set(a.word,(counts.get(a.word)||0)+1);}}
+   if(a.status==='pending')pending++;
+   const item=document.createElement('p');item.append(document.createTextNode(a.word+' — '+a.status+' '));
+   if(a.status==='pending'){
+    for(const [answerStatus,label] of [['ok','Approva'],['rejected','Escludi']]){
+     const b=document.createElement('button');b.textContent=label;
+     b.onclick=async()=>{b.disabled=true;try{await adminCall('moderate',{code,id:a.id,status:answerStatus});await adminAnswers();}catch(e){adminNotice(e.message);}finally{b.disabled=false;}};
+     item.append(b);
+    }
+   }target.append(item);
+  }
+  $('approveAll').hidden=pending===0;
+  $('approveAll').textContent='Approva tutto ('+pending+')';
+  $('pendingCounter').textContent=pending?pending+' risposte in attesa':'Nessuna risposta in attesa';
+  teacherWords=[...counts];renderTeacherPreview();
+ }catch(e){adminNotice('Risposte: '+e.message);}
+ finally{adminAnswersBusy=false;}
+}
+$('approveAll').onclick=async()=>{
+ const code=selectedSession,btn=$('approveAll');
+ if(!code||btn.hidden)return;
+ if(!confirm('Approvare tutte le risposte attualmente in attesa in questa sessione?'))return;
+ btn.disabled=true;
+ try{const result=await adminCall('approve_all',{code});adminNotice('Risposte approvate: '+result.approved+'.');await adminAnswers();}
+ catch(e){adminNotice('Approva tutto: '+e.message);}
+ finally{btn.disabled=false;}
+};
+
+const defaults={shape:'free',palette:'color',colors:['#205c94','#a65319','#28734a','#843d90','#b03050'],font:'Arial',orientation:'mixed',density:'normal',background:'white',bg:'#fff4df',seed:0,fill:true};
+function parseSettings(raw){try{return {...defaults,...JSON.parse(raw||'{}')};}catch(e){return {...defaults};}}
+function saveCanvas(id){const a=document.createElement('a');a.download='fabbrica-delle-parole.png';a.href=$(id).toDataURL('image/png');a.click();}
+$('limDownload').onclick=()=>saveCanvas('cloud');
+$('teacherDownload').onclick=()=>saveCanvas('teacherCloud');
+$('limFullscreen').onclick=()=> $('lim').requestFullscreen?.();
+function renderTeacherPreview(){drawCloud($('teacherCloud'),teacherWords,teacherSettings||defaults);$('teacherCounts').textContent=`${teacherWords.length} parole differenti · ${teacherWords.reduce((sum,v)=>sum+v[1],0)} partecipazioni conteggiate`;}
+async function loadTeacherSettings(){
+ const rows=await readSessionForAdmin();teacherSettings=parseSettings(rows[0]?.[6]);buildTeacherSettings();renderTeacherPreview();
+}
+async function readSessionForAdmin(){
+ const r=await fetch(CONFIG.CSV_URL,{cache:'no-store'});if(!r.ok)throw Error('Impossibile leggere le impostazioni: '+r.status);
+ return csvRows((await r.text()).replace(/^\ufeff/,'')).slice(1).filter(r=>r[0]===selectedSession);
+}
+function buildTeacherSettings(){
+ const root=$('cloudSettings');root.replaceChildren();const s=teacherSettings;
+ const options={shape:['Forma',{free:'Libera',rectangle:'Rettangolo',circle:'Cerchio',heart:'Cuore',star:'Stella',tree:'Albero',cloud:'Nuvola'}],palette:['Colori',{color:'Multicolore',blue:'Blu',autumn:'Autunno',mono:'Monocromatico',custom:'Personalizzati'}],font:['Carattere',{Arial:'Arial',Georgia:'Georgia',Verdana:'Verdana','Trebuchet MS':'Trebuchet MS','Courier New':'Courier New'}],orientation:['Orientamento',{mixed:'Misto (anche obliquo)',horizontal:'Orizzontale',vertical:'Verticale',diagonal:'Obliquo'}],density:['Densità',{normal:'Media',tight:'Alta',loose:'Bassa'}],background:['Sfondo',{white:'Bianco',color:'Colorato',transparent:'Trasparente'}]};
+ const grid=document.createElement('div');grid.className='settings-grid';root.append(grid);
+ for(const [key,[label,choices]] of Object.entries(options)){
+  const l=document.createElement('label');l.textContent=label;const sel=document.createElement('select');
+  for(const [value,name] of Object.entries(choices)){const opt=document.createElement('option');opt.value=value;opt.textContent=name;sel.append(opt);}sel.value=s[key];sel.onchange=()=>{s[key]=sel.value;renderTeacherPreview();};l.append(sel);grid.append(l);
+ }
+ const fillLabel=document.createElement('label');const fill=document.createElement('input');fill.type='checkbox';fill.checked=s.fill!==false;fill.onchange=()=>{s.fill=fill.checked;renderTeacherPreview();};fillLabel.append(fill,document.createTextNode(' Riempimento automatico della sagoma con copie decorative'));root.append(fillLabel);
+ const colors=document.createElement('div');colors.className='tools';root.append(colors);
+ for(let i=0;i<5;i++){const l=document.createElement('label');l.textContent='Colore '+(i+1)+' ';const inp=document.createElement('input');inp.type='color';inp.value=s.colors[i];inp.oninput=()=>{s.colors[i]=inp.value;s.palette='custom';renderTeacherPreview();};l.append(inp);colors.append(l);}
+ const bg=document.createElement('input');bg.type='color';bg.value=s.bg;bg.oninput=()=>{s.bg=bg.value;s.background='color';renderTeacherPreview();};const bgLabel=document.createElement('label');bgLabel.textContent='Colore sfondo ';bgLabel.append(bg);colors.append(bgLabel);
+ const actions=document.createElement('div');actions.className='tools';root.append(actions);
+ const save=document.createElement('button');save.textContent='Applica alla LIM';save.onclick=async()=>{try{await adminCall('settings',{code:selectedSession,settings:JSON.stringify(s)});adminNotice('Impostazioni salvate e inviate alla LIM.');}catch(e){adminNotice('Impostazioni: '+e.message);}};actions.append(save);
+ const regen=document.createElement('button');regen.textContent='Rigenera';regen.onclick=()=>{s.seed=(Number(s.seed||0)+1)%1000000;renderTeacherPreview();};actions.append(regen);
+}
+
+function drawCloud(cv,words,raw){
+  // Le copie sono solamente grafiche: la frequenza reale rimane quella delle risposte.
+  const s={...defaults,...raw},ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  if(s.background!=='transparent'){
+    ctx.fillStyle=s.background==='color'?s.bg:'#fff';ctx.fillRect(0,0,W,H);
+  }
+  const items=words.filter(v=>v&&String(v[0]).trim()&&Number(v[1])>0)
+    .map(([w,n])=>({w:String(w),n:Number(n)}))
+    .sort((a,b)=>b.n-a.n||a.w.localeCompare(b.w));
+  if(!items.length)return;
+  const cx=W/2,cy=H/2,rx=W*.45,ry=H*.43;
+  function shapePath(c){
+    c.beginPath();
+    if(s.shape==='free'||s.shape==='rectangle')c.rect(W*.035,H*.045,W*.93,H*.91);
+    else if(s.shape==='circle')c.ellipse(cx,cy,Math.min(rx,ry)*1.03,ry,0,0,Math.PI*2);
+    else if(s.shape==='heart'){
+      c.moveTo(cx,cy+ry*.88);
+      c.bezierCurveTo(cx-rx*.38,cy+ry*.65,cx-rx*1.15,cy-ry*.15,cx-rx*.88,cy-ry*.68);
+      c.bezierCurveTo(cx-rx*.63,cy-ry*1.18,cx-rx*.16,cy-ry*.98,cx,cy-ry*.49);
+      c.bezierCurveTo(cx+rx*.16,cy-ry*.98,cx+rx*.63,cy-ry*1.18,cx+rx*.88,cy-ry*.68);
+      c.bezierCurveTo(cx+rx*1.15,cy-ry*.15,cx+rx*.38,cy+ry*.65,cx,cy+ry*.88);
+    }else if(s.shape==='star'){
+      for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?.44:1;
+        const x=cx+Math.cos(a)*rx*r,y=cy+Math.sin(a)*ry*r;
+        if(!i)c.moveTo(x,y);else c.lineTo(x,y);
+      }
+    }else if(s.shape==='tree'){
+      const pts=[[0,-1],[-.40,-.39],[-.25,-.39],[-.72,.17],[-.40,.17],[-.90,.67],[-.13,.67],[-.13,1],[.13,1],[.13,.67],[.90,.67],[.40,.17],[.72,.17],[.25,-.39],[.40,-.39]];
+      pts.forEach(([x,y],i)=>i?c.lineTo(cx+x*rx*.92,cy+y*ry):c.moveTo(cx+x*rx*.92,cy+y*ry));
+    }else if(s.shape==='cloud'){
+      c.moveTo(cx-rx*.77,cy+ry*.63);
+      c.bezierCurveTo(cx-rx*1.30,cy+ry*.63,cx-rx*1.35,cy-ry*.23,cx-rx*.93,cy-ry*.31);
+      c.bezierCurveTo(cx-rx*.94,cy-ry*.98,cx-rx*.25,cy-ry*1.13,cx+rx*.04,cy-ry*.66);
+      c.bezierCurveTo(cx+rx*.45,cy-ry*1.06,cx+rx*.97,cy-ry*.70,cx+rx*.93,cy-ry*.19);
+      c.bezierCurveTo(cx+rx*1.36,cy-ry*.11,cx+rx*1.26,cy+ry*.63,cx+rx*.77,cy+ry*.63);
+    }else c.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);
+    c.closePath();
+  }
+  const mask=document.createElement('canvas');mask.width=W;mask.height=H;
+  const mc=mask.getContext('2d');shapePath(mc);mc.fillStyle='#000';mc.fill();
+  const UNIT=4,N=Math.ceil(W/UNIT),M=Math.ceil(H/UNIT);
+  const rawMask=mc.getImageData(0,0,W,H).data;
+  const inside=new Uint8Array(N*M),occupied=new Uint8Array(N*M),validCells=[];
+  for(let gy=0;gy<M;gy++)for(let gx=0;gx<N;gx++){
+    const x=Math.min(W-1,gx*UNIT+2),y=Math.min(H-1,gy*UNIT+2),k=gy*N+gx;
+    if(rawMask[(y*W+x)*4+3]>90){inside[k]=1;validCells.push(k);}
+  }
+  if(!validCells.length)return;
+  const palette={color:defaults.colors,blue:['#12365a','#1971c2','#1098ad','#4263eb','#27588a'],autumn:['#954d20','#d97706','#a62639','#556b2f','#a47732'],mono:['#222222','#444444','#666666','#555555','#333333'],custom:s.colors};
+  const colors=palette[s.palette]||palette.color;
+  let seed=(Math.floor(Number(s.seed)||0)+13694431)>>>0;
+  const rand=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+  const rots=s.orientation==='horizontal'?[0]:s.orientation==='vertical'?[Math.PI/2]:s.orientation==='diagonal'?[-Math.PI/4,-Math.PI/6,Math.PI/6,Math.PI/4]:[0,0,0,0,Math.PI/2,-Math.PI/2,Math.PI/6,-Math.PI/6,Math.PI/4,-Math.PI/4];
+  const gap=s.density==='tight'?1:s.density==='loose'?3:2;
+  const sprites=new Map(),placements=[];
+  // Campionamento dei pixel effettivi delle lettere (non dei grandi rettangoli ruotati).
+  // In questo modo le parole oblique possono accostarsi senza lasciare grandi vuoti.
+  function sprite(w,size,rot){
+    const key=w+'\u0000'+size+'\u0000'+rot;
+    if(sprites.has(key))return sprites.get(key);
+    const mctx=document.createElement('canvas').getContext('2d');mctx.font='bold '+size+'px "'+s.font+'"';
+    const tw=mctx.measureText(w).width,th=size*1.28;
+    const cw=Math.ceil(Math.abs(tw*Math.cos(rot))+Math.abs(th*Math.sin(rot))+20),ch=Math.ceil(Math.abs(tw*Math.sin(rot))+Math.abs(th*Math.cos(rot))+20);
+    const pc=document.createElement('canvas');pc.width=cw;pc.height=ch;
+    const p=pc.getContext('2d');p.translate(cw/2,ch/2);p.rotate(rot);p.font='bold '+size+'px "'+s.font+'"';p.textAlign='center';p.textBaseline='middle';p.fillStyle='#000';p.fillText(w,0,0);
+    const pix=p.getImageData(0,0,cw,ch).data,points=[];
+    for(let y=UNIT/2;y<ch;y+=UNIT)for(let x=UNIT/2;x<cw;x+=UNIT){
+      if(pix[(Math.floor(y)*cw+Math.floor(x))*4+3]>55)points.push([Math.round((x-cw/2)/UNIT),Math.round((y-ch/2)/UNIT)]);
+    }
+    const result={points,tw};sprites.set(key,result);return result;
+  }
+  function place(w,size,rot,gx,gy,allowClip){
+    const sp=sprite(w,size,rot),points=sp.points;
+    if(points.length<2)return false;
+    let covered=0;
+    for(const [dx,dy] of points){
+      const x=gx+dx,y=gy+dy;
+      if(x<0||x>=N||y<0||y>=M){if(!allowClip)return false;continue;}
+      const k=y*N+x;
+      if(!inside[k]){if(!allowClip)return false;continue;}
+      covered++;
+      if(occupied[k])return false;
+    }
+    if(covered<points.length*(allowClip?.50:.985))return false;
+    // Segna anche i vicini per un distacco di pochi pixel, non enormi rettangoli vuoti.
+    for(const [dx,dy] of points){
+      const x=gx+dx,y=gy+dy;if(x<0||x>=N||y<0||y>=M)continue;
+      if(!inside[y*N+x])continue;
+      for(let sy=-gap;sy<=gap;sy++)for(let sx=-gap;sx<=gap;sx++){
+        const xx=x+sx,yy=y+sy;if(xx>=0&&xx<N&&yy>=0&&yy<M)occupied[yy*N+xx]=1;
+      }
+    }
+    placements.push({w,size,rot,x:gx*UNIT,y:gy*UNIT});return true;
+  }
+  const total=items.reduce((a,it)=>a+it.n,0),max=items[0].n;
+  const spiral=(i,t)=>{
+    const a=t*2.399963229728653+i*.63,rad=Math.sqrt(t/470);
+    return [Math.round(N/2+Math.cos(a)*rad*N*.47),Math.round(M/2+Math.sin(a)*rad*M*.47)];
+  };
+  // Prima tutte le parole autentiche, preferendo il centro ma accostandole tra loro.
+  for(let i=0;i<items.length;i++){
+    const it=items[i],abundance=Math.min(1,Math.sqrt(total/32));
+    const wanted=Math.round(25+22*Math.pow(it.n/max,.62)+11*abundance);
+    let ok=false;
+    for(const f of [1,.88,.76,.65,.56,.48]){
+      const size=Math.max(18,Math.round(wanted*f));
+      for(let t=0;t<480&&!ok;t++){
+        const [gx,gy]=spiral(i,t),rot=t<70?0:rots[(i+t)%rots.length];
+        ok=place(it.w,size,rot,gx,gy,false);
+      }
+      if(ok)break;
+    }
+  }
+  if(s.fill!==false){
+    const countLimit=s.density==='tight'?470:s.density==='normal'?360:240;
+    let added=0,fail=0;
+    while(added<countLimit&&fail<6000){
+      const pick=rand()*total;let cumulative=0,it=items[0];
+      for(const item of items){cumulative+=item.n;if(pick<cumulative){it=item;break;}}
+      const idx=validCells[Math.floor(rand()*validCells.length)],gx=idx%N,gy=Math.floor(idx/N);
+      const size=Math.round((s.density==='tight'?17:s.density==='normal'?19:21)+rand()*8);
+      const rot=rots[Math.floor(rand()*rots.length)];
+      if(place(it.w,size,rot,gx,gy,true)){added++;fail=0;}else fail++;
+    }
+  }
+  // La maschera riguarda esclusivamente il disegno: non altera nessun dato.
+  ctx.save();shapePath(ctx);ctx.clip();
+  placements.forEach((p,i)=>{
+    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold '+p.size+'px "'+s.font+'"';
+    ctx.fillStyle=colors[(i+Math.floor(Number(s.seed)||0))%colors.length];
+    ctx.fillText(p.w,0,0);ctx.restore();
+  });
+  ctx.restore();
+}
+
+
+setInterval(()=>{if(mode==='teacher'&&teacherPassword&&selectedSession&&!postPending&&!adminAnswersBusy)adminAnswers();},15000);
+</script></body></html>
